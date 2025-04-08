@@ -1,6 +1,10 @@
 # README.md
 
-# Document Keyword Parser
+<p align="center">
+  <img src="assets/images/linx_logo.png" alt="LINX Logo" width="200"/>
+</p>
+
+# LINX
 
 A comprehensive document processing system that replaces keywords in Word documents with data from Excel spreadsheets, user inputs, JSON files, and templates. This system enables dynamic document generation with data-driven content and interactive user inputs, using `!` as the primary separator within keywords.
 
@@ -129,11 +133,11 @@ Start the application with:
 streamlit run main.py
 ```
 
-Then follow the step-by-step interface to process your documents.
+Then follow the step-by-step interface to process your documents with LINX.
 
 ## Tester Application
 
-The tester application (`tester_app.py`) provides a development and testing environment for the Excel Manager and Keyword Parser components:
+The tester application (`tester_app.py`) provides a development and testing environment for the Excel Manager and Keyword Parser components of LINX:
 
 ### Features
 
@@ -167,7 +171,7 @@ from excel_manager import excelManager
 excel_mgr = excelManager("financial_report.xlsx")
 parser = keywordParser(excel_mgr)
 
-# Basic keyword replacement using '!'
+# Basic keyword replacement using LINX syntax with '!'
 template = "The total revenue is {{XL!CELL!Summary!B5}}."
 result = parser.parse(template)
 print(result) # Example: "The total revenue is $127,350.00."
@@ -185,4 +189,4 @@ processed_report = parser.parse(report_template)
 
 ## Developer
 
-**David Seguin** is the creator and lead developer of the Document Keyword Parser. 
+**David Seguin** is the creator and lead developer of LINX. 
