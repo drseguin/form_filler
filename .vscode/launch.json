@@ -2,24 +2,24 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "LINX",
+            "name": "Form Filler",
             "type": "debugpy",
             "request": "launch",
-            "program": "/Users/davidseguin/git/LINX/.venv/lib/python3.11/site-packages/streamlit",
+            "program": "/Users/davidseguin/git/form_filler/.venv/lib/python3.11/site-packages/streamlit",
             "console": "integratedTerminal",
-            "cwd": "/Users/davidseguin/git/LINX",
-            "args": ["run", "/Users/davidseguin/git/LINX/main.py"],
-            "python": "/Users/davidseguin/git/LINX/.venv/bin/python"
+            "cwd": "/Users/davidseguin/git/form_filler",
+            "args": ["run", "/Users/davidseguin/git/form_filler/main.py"],
+            "python": "/Users/davidseguin/git/form_filler/.venv/bin/python"
         },
         {
-            "name": "LINX Tester",
+            "name": "Form Filler Tester",
             "type": "debugpy",
             "request": "launch",
-            "program": "/Users/davidseguin/git/LINX/.venv/lib/python3.11/site-packages/streamlit",
+            "program": "/Users/davidseguin/git/form_filler/.venv/lib/python3.11/site-packages/streamlit",
             "console": "integratedTerminal",
-            "cwd": "/Users/davidseguin/git/LINX",
-            "args": ["run", "/Users/davidseguin/git/LINX/tester_app.py"],
-            "python": "/Users/davidseguin/git/LINX/.venv/bin/python"
+            "cwd": "/Users/davidseguin/git/form_filler",
+            "args": ["run", "/Users/davidseguin/git/form_filler/tester_app.py"],
+            "python": "/Users/davidseguin/git/form_filler/.venv/bin/python"
         }
     ]
 }
