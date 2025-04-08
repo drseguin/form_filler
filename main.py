@@ -310,8 +310,8 @@ def main():
     # Create a container for the logo (top left) and app intro
     header_container = st.container()
     with header_container:
-            # Load and display the LINX logo
-            st.image("assets/images/linx_logo.png", width=200)
+            # Load and display the Form Filler logo
+            st.image("assets/images/form_filler_logo.png", width=200)
     
     # Initialize parser instance for help text display
     if 'keyword_parser_instance_for_help' not in st.session_state:
