@@ -305,9 +305,6 @@ def display_keyword_summary(summary):
 def main():
     # Load and display the LINX logo
     st.image("assets/images/linx_logo.png", width=200)
-    
-    # st.title("LINX")
-    st.markdown("<p style='font-size:18px;'>Lexical Integration & Notation eXpert</p>", unsafe_allow_html=True)
 
     # Load custom CSS
     with open('style.css') as f:
