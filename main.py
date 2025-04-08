@@ -304,7 +304,7 @@ def display_keyword_summary(summary):
 
 def main():
     st.title("LINX")
-    st.subheader("Lexical Integration & Notation Engine")
+    st.subheader("Lexical Integration & Notation eXpert")
     
     # Load custom CSS
     with open('style.css') as f:
