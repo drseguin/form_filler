@@ -8,6 +8,10 @@ from keyword_parser import keywordParser
 
 st.title("Excel Manager App")
 
+# Load custom CSS
+with open('style.css') as f:
+    st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
 # Initialize session state
 if 'excel_manager' not in st.session_state:
     st.session_state.excel_manager = None

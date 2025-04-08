@@ -1,0 +1,29 @@
+/* Custom styles for LINX application */
+
+/* Change inline code styling to use primary color for text instead of background */
+code {
+    color: #f58220 !important;
+    background-color: rgba(245, 130, 32, 0.1) !important; /* Very light orange background */
+    padding: 3px 5px !important;
+    border-radius: 4px !important;
+    font-weight: 500 !important;
+    font-family: 'Courier New', monospace !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* Adjust markdown content for better overall readability */
+.markdown-text-container {
+    line-height: 1.6 !important;
+}
+
+/* Make sure the styling is consistent in both light and dark mode */
+.light-mode code {
+    color: #f58220 !important;
+    background-color: rgba(245, 130, 32, 0.1) !important;
+}
+
+.dark-mode code {
+    color: #f58220 !important;
+    background-color: rgba(245, 130, 32, 0.2) !important; /* Slightly stronger background for dark mode */
+    border: 1px solid rgba(245, 130, 32, 0.3) !important;
+} 
