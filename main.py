@@ -303,7 +303,8 @@ def display_keyword_summary(summary):
 
 
 def main():
-    st.title("Document Keyword Parser")
+    st.title("LINX")
+    st.subheader("Lexical Integration & Notation Engine")
     st.markdown("""
     Upload a Word document (`.docx`) containing keywords (e.g., `{{XL!CELL!A1}}`, `{{INPUT!text!Name}}`).
     The tool analyzes keywords, prompts for required files (like Excel), gathers user input if needed,
