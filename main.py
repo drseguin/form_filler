@@ -303,19 +303,16 @@ def display_keyword_summary(summary):
 
 
 def main():
-    # Load and display the LINX logo
-    st.image("assets/images/linx_logo.png", width=200)
-
     # Load custom CSS
     with open('style.css') as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-        
-    st.markdown("""
-    Upload a Word document (`.docx`) containing keywords (e.g., `{{XL!CELL!A1}}`, `{{INPUT!text!Name}}`).
-    The tool analyzes keywords, prompts for required files (like Excel), gathers user input if needed,
-    processes the document, and provides a download link. Uses `!` as keyword separator.
-    """)
-
+    
+    # Create a container for the logo (top left) and app intro
+    header_container = st.container()
+    with header_container:
+            # Load and display the LINX logo
+            st.image("assets/images/linx_logo.png", width=200)
+    
     # Initialize parser instance for help text display
     if 'keyword_parser_instance_for_help' not in st.session_state:
          st.session_state.keyword_parser_instance_for_help = keywordParser()
