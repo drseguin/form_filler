@@ -330,17 +330,19 @@ def main():
             st.session_state[key] = value
 
     # --- Reset Button ---
-    if st.sidebar.button("Reset Application State"):
-        # Clean up temp files
-        if st.session_state.doc_path and os.path.exists(st.session_state.doc_path): os.unlink(st.session_state.doc_path)
-        if st.session_state.excel_path and os.path.exists(st.session_state.excel_path): os.unlink(st.session_state.excel_path)
-        if st.session_state.processed_doc_path and os.path.exists(st.session_state.processed_doc_path): os.unlink(st.session_state.processed_doc_path)
-        # Close Excel Manager if open
-        if st.session_state.excel_manager_instance: st.session_state.excel_manager_instance.close()
-        # Reset state variables
-        for key in default_state:
-            st.session_state[key] = default_state[key]
-        st.rerun()
+    col1, col2 = st.columns([5, 1])
+    with col2:
+        if st.button("Reset"):
+            # Clean up temp files
+            if st.session_state.doc_path and os.path.exists(st.session_state.doc_path): os.unlink(st.session_state.doc_path)
+            if st.session_state.excel_path and os.path.exists(st.session_state.excel_path): os.unlink(st.session_state.excel_path)
+            if st.session_state.processed_doc_path and os.path.exists(st.session_state.processed_doc_path): os.unlink(st.session_state.processed_doc_path)
+            # Close Excel Manager if open
+            if st.session_state.excel_manager_instance: st.session_state.excel_manager_instance.close()
+            # Reset state variables
+            for key in default_state:
+                st.session_state[key] = default_state[key]
+            st.rerun()
 
     # --- Step 1: Upload Word Document ---
     st.header("Step 1: Upload Document")
