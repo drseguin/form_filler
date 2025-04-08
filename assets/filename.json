@@ -1,0 +1,27 @@
+{
+  "name": "sample",
+  "version": "1.0.0",
+  "description": "This is a sample JSON file.",
+  "settings": {
+    "id": 123,
+    "values": [1, 2, 3, 4],
+    "theme": "light"
+  },
+  "users": [
+    { "name": "John Doe",
+      "age": 30,
+      "email": "john.doe@example.com"
+    },
+    { "name": "Jane Smith",
+      "age": 25,
+      "email": "jane.smith@example.com"
+    }
+  ],
+  "items": [
+    { "price": 19.99 },
+    { "price": 29.99 },
+    { "price": 39.99 },
+    { "price": 49.99 },
+    { "price": 59.99 }
+  ]
+} 

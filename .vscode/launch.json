@@ -1,0 +1,25 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "LINX",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/Users/davidseguin/git/LINX/.venv/lib/python3.11/site-packages/streamlit",
+            "console": "integratedTerminal",
+            "cwd": "/Users/davidseguin/git/LINX",
+            "args": ["run", "/Users/davidseguin/git/LINX/main.py"],
+            "python": "/Users/davidseguin/git/LINX/.venv/bin/python"
+        },
+        {
+            "name": "LINX Tester",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/Users/davidseguin/git/LINX/.venv/lib/python3.11/site-packages/streamlit",
+            "console": "integratedTerminal",
+            "cwd": "/Users/davidseguin/git/LINX",
+            "args": ["run", "/Users/davidseguin/git/LINX/tester_app.py"],
+            "python": "/Users/davidseguin/git/LINX/.venv/bin/python"
+        }
+    ]
+}
