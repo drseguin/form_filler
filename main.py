@@ -347,7 +347,7 @@ def main():
             st.rerun()
 
     # --- Step 1: Upload Word Document ---
-    st.header("Step 1: Upload Document")
+    st.subheader("Step 1: Upload Document")
     doc_file = st.file_uploader("Upload Word Document (.docx)", type=["docx"], key="main_doc_uploader")
 
     if doc_file and not st.session_state.doc_uploaded:
@@ -362,7 +362,7 @@ def main():
 
     # --- Step 2: Analysis & Conditional Excel Upload ---
     if st.session_state.doc_uploaded:
-        st.header("Step 2: Analysis & File Uploads")
+        st.subheader("Step 2: Analysis & File Uploads")
         if not st.session_state.analysis_summary:
             st.info("Analyzing document...")
             try:
@@ -421,7 +421,7 @@ def main():
                 has_inputs = sum(st.session_state.analysis_summary['input_counts'].values()) > 0
 
                 if has_inputs:
-                    st.header("Step 3: Provide User Inputs")
+                    st.subheader("Step 3: Provide User Inputs")
                     if not st.session_state.form_submitted_main:
                         with st.form(key="main_input_form"):
                             # Use analysis summary to find all input keywords
@@ -475,7 +475,7 @@ def main():
 
                 # --- Step 4: Process ---
                 # Only proceed to Step 4 if all prerequisites are met
-                st.header("Step 4: Process Document")
+                st.subheader("Step 4: Process Document")
                 
                 # Determine if ready to process - adjust gate logic to check all requirements
                 ready_to_process = st.session_state.doc_uploaded and \
@@ -531,7 +531,7 @@ def main():
 
             # --- Step 5: Download ---
             if st.session_state.processed_doc_path:
-                st.header("Step 5: Download Result")
+                st.subheader("Step 5: Download Result")
                 st.success(f"Document processed. Approximately {st.session_state.processed_count} keywords replaced.")
                 
                 try:
