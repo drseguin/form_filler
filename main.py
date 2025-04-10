@@ -401,10 +401,10 @@ def process_word_doc(doc_path, excel_path=None, parser=None):
 
 
 def display_keyword_summary(summary):
-    """Display analysis summary with updated Excel categories."""
+    """Display analysis summary with updated Excel categories and template details."""
     st.write(f"Total keywords found: **{summary['total_keywords']}**")
     with st.expander("Document Analysis Summary"):
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2 = st.columns(2)
 
         with col1:
             st.markdown("**Excel Keywords (`XL!`)**")
@@ -415,26 +415,62 @@ def display_keyword_summary(summary):
             for subtype, count in summary["excel_counts"].items():
                  if count > 0: st.write(f"- {subtype}: {count}")
 
-        with col2:
             st.markdown("**Input Keywords (`INPUT!`)**")
             total_inputs = sum(summary["input_counts"].values())
             st.write(f"Total: {total_inputs}")
             for input_type, count in summary["input_counts"].items():
                  if count > 0: st.write(f"- {input_type}: {count}")
 
-        with col3:
+        with col2:
+            # Enhanced Template section with more details
             st.markdown("**Template Keywords (`TEMPLATE!`)**")
             st.write(f"Total: {summary['template_count']}")
+            if summary['template_count'] > 0 and 'keywords' in summary and summary['keywords']['template']:
+                # Analyze template types - classify by whole doc vs section
+                template_types = {"section": [], "whole_doc": [], "other": []}
+                for item in summary['keywords']['template']:
+                    parts = item.split("!")
+                    if len(parts) > 1 and parts[1].startswith("section="):
+                        template_types["section"].append(item)
+                    elif len(parts) == 1:
+                        template_types["whole_doc"].append(item)
+                    else:
+                        template_types["other"].append(item)
+                
+                # Show section-based templates
+                if template_types["section"]:
+                    st.write("**Section-based templates:**")
+                    for item in template_types["section"][:3]:  # Show first 3
+                        parts = item.split("!")
+                        filename = parts[0]
+                        section_name = parts[1].split("section=")[1].split(",")[0].strip()
+                        st.caption(f"- Extract section *'{section_name}'* from `{filename}`")
+                
+                # Show whole document templates
+                if template_types["whole_doc"]:
+                    st.write("**Whole document templates:**")
+                    for item in template_types["whole_doc"][:3]:  # Show first 3
+                        st.caption(f"- Include entire document `{item}`")
+                
+                # Show other template types
+                if template_types["other"]:
+                    st.write("**Other template operations:**")
+                    for item in template_types["other"][:3]:  # Show first 3
+                        st.caption(f"- `{{{{{item}}}}}`")
+            
             st.markdown("**JSON Keywords (`JSON!`)**")
             st.write(f"Total: {summary['json_count']}")
-
-        with col4:
-             st.markdown("**Other/Invalid**")
-             st.write(f"Total: {summary['other_count']}")
-             if summary['other_count'] > 0 and 'keywords' in summary and summary['keywords']['other']:
-                  st.caption("Examples:")
-                  for item in summary['keywords']['other'][:3]: # Show first few
-                       st.caption(f"`{{{{{item}}}}}`")
+            if summary['json_count'] > 0 and 'keywords' in summary and summary['keywords']['json']:
+                st.caption("Examples:")
+                for item in summary['keywords']['json'][:2]:  # Show first 2
+                    st.caption(f"- `{{{{{item}}}}}`")
+            
+            st.markdown("**Other/Invalid**")
+            st.write(f"Total: {summary['other_count']}")
+            if summary['other_count'] > 0 and 'keywords' in summary and summary['keywords']['other']:
+                st.caption("Examples:")
+                for item in summary['keywords']['other'][:2]:  # Show first 2
+                    st.caption(f"- `{{{{{item}}}}}`")
 
 
 def main():

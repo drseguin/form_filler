@@ -107,14 +107,19 @@ class keywordParser:
         docx_template_to_insert = None
         docx_template_keyword = None
 
+        # Add debug logging
+        self.logger.info(f"Processing {len(matches)} keywords in string: '{input_string[:50]}...'")
+
         for match in matches:
             keyword = match.group(0)  # Full keyword with {{}}
             content = match.group(1)  # Content inside {{}}
 
             # Always check first if this exact keyword is in our input_values dictionary
             if keyword in self.input_values:
+                self.logger.info(f"Found keyword '{keyword}' in input_values dictionary")
                 replacement = self.input_values[keyword]
             else:
+                self.logger.info(f"Processing keyword '{keyword}', content: '{content}'")
                 replacement = self._process_keyword(content)
 
             # Check if we got a docx template path back
@@ -122,6 +127,7 @@ class keywordParser:
                 # For a Word document template, we want to remember it but not do text replacement yet
                 docx_template_to_insert = replacement["docx_template"]
                 docx_template_keyword = keyword
+                self.logger.info(f"Found template to insert from: {docx_template_to_insert}")
                 # Don't do text replacement for this keyword yet
                 continue
                 
@@ -130,6 +136,7 @@ class keywordParser:
                 # For a table, we want to remember it but not do text replacement yet
                 table_to_insert = replacement["table_object"]
                 table_keyword = keyword
+                self.logger.info(f"Found table to insert")
                 # Don't do text replacement for this keyword yet
                 continue
                 
@@ -140,11 +147,13 @@ class keywordParser:
         # Handle template insertion with priority over table
         if docx_template_to_insert and result.strip() == input_string.strip():
             # If the only content was the template keyword, return a special object
+            self.logger.info(f"Returning template-only replacement from {docx_template_to_insert}")
             return {"text": "", "docx_template": docx_template_to_insert, "keyword": docx_template_keyword}
         elif docx_template_to_insert:
             # If there was a template keyword and other text, still return both
             # Replace the template keyword with an empty string in the result
             result = result.replace(docx_template_keyword, "", 1)
+            self.logger.info(f"Returning mixed template and text replacement from {docx_template_to_insert}")
             return {"text": result, "docx_template": docx_template_to_insert, "keyword": docx_template_keyword}
         # Then handle table insertion if no template
         elif table_to_insert and result.strip() == input_string.strip():
@@ -755,6 +764,14 @@ class keywordParser:
         return {"table_object": table}
 
 
+    def _parse_section_param(self, param_part):
+        """Extract section name from a section= parameter string."""
+        if not param_part.startswith("section="):
+            return None
+        
+        section_name = param_part.split("section=")[1].split(",")[0].strip()
+        return section_name
+
     def _process_template_keyword(self, content):
         """Process template keywords using '!' separator."""
         if not content:
@@ -764,6 +781,8 @@ class keywordParser:
             # Split into filename and optional parameters using '!'
             parts = content.split("!")
             filename = parts[0].strip()
+            
+            self.logger.info(f"Processing TEMPLATE keyword with filename: '{filename}', parts: {parts}")
 
             # Handle library templates {{TEMPLATE!LIBRARY!template_name!version}}
             if filename.upper() == "LIBRARY":
@@ -776,108 +795,269 @@ class keywordParser:
 
             # Always look in the templates directory
             template_path = os.path.join('templates', filename)
+            self.logger.info(f"Template path resolved to: {template_path}")
 
-            # Handle file-based templates
+            # Check if file exists first
             if not os.path.exists(template_path):
+                self.logger.warning(f"Template file not found: {template_path}")
                 return f"[Template file not found: {template_path}]"
-
-            # Check if the file is a Word document (.docx)
-            if filename.lower().endswith('.docx'):
+            
+            self.logger.info(f"Template file exists: {template_path}")
+            
+            # Determine if we have special parameters
+            has_section = False
+            section_name = None
+            param_part = ""
+            
+            if len(parts) > 1:
+                param_part = "!".join(parts[1:])
+                self.logger.info(f"Template has parameters: {param_part}")
+                
+                if param_part.startswith("section="):
+                    has_section = True
+                    section_name = self._parse_section_param(param_part)
+                    self.logger.info(f"Template has section parameter: '{section_name}'")
+            
+            # For Word documents with section parameter
+            if filename.lower().endswith('.docx') and has_section:
+                self.logger.info(f"Processing Word document section extraction for section '{section_name}'")
                 try:
                     from docx import Document
+                    doc = Document(template_path)
                     
-                    # For docx files, we need to preserve formatting
-                    # Instead of extracting text, return the document object directly
-                    if self.word_document:
-                        # If we have a document object, we'll return a special object 
-                        # that signals we want to insert the entire document with formatting
-                        return {"docx_template": template_path}
-                    else:
-                        # If we don't have a document object (e.g., in testing),
-                        # we'll fallback to text extraction
-                        doc = Document(template_path)
-                        file_content = "\n\n".join([paragraph.text for paragraph in doc.paragraphs])
+                    # Debug logging
+                    self.logger.info(f"Document has {len(doc.paragraphs)} paragraphs")
+                    self.logger.info(f"Looking for section '{section_name}'")
+                    
+                    # Find the section by heading or exact title match
+                    found_section = False
+                    section_start_index = -1
+                    section_end_index = -1
+                    
+                    # First try to find the section by exact title match
+                    for i, para in enumerate(doc.paragraphs):
+                        if section_name.lower() == para.text.strip().lower():
+                            found_section = True
+                            section_start_index = i + 1  # Start from next paragraph
+                            self.logger.info(f"Found section by exact title match at paragraph {i}: '{para.text}'")
+                            break
+                    
+                    # If not found, try by heading styles
+                    if not found_section:
+                        for i, para in enumerate(doc.paragraphs):
+                            is_heading = para.style and "heading" in para.style.name.lower()
+                            if is_heading and section_name.lower() in para.text.lower():
+                                found_section = True
+                                section_start_index = i + 1  # Start from next paragraph
+                                self.logger.info(f"Found section by heading style at paragraph {i}: '{para.text}'")
+                                break
+                    
+                    # Find where the section ends (at the next heading or end of document)
+                    if found_section:
+                        for i in range(section_start_index, len(doc.paragraphs)):
+                            para = doc.paragraphs[i]
+                            is_heading = para.style and "heading" in para.style.name.lower()
+                            if is_heading:
+                                section_end_index = i
+                                self.logger.info(f"Found section end at paragraph {i}: '{para.text}'")
+                                break
                         
-                        # If there are tables, extract their content as well
-                        for table in doc.tables:
-                            table_text = []
-                            for row in table.rows:
-                                row_text = []
-                                for cell in row.cells:
-                                    row_text.append(cell.text)
-                                table_text.append(" | ".join(row_text))
-                            file_content += "\n\n" + "\n".join(table_text)
-                        return file_content
+                        # If we didn't find an end, use the end of the document
+                        if section_end_index == -1:
+                            section_end_index = len(doc.paragraphs)
+                            self.logger.info(f"Section continues to end of document (paragraph {section_end_index})")
+                        
+                        # Extract the paragraphs in this section
+                        section_paragraphs = doc.paragraphs[section_start_index:section_end_index]
+                        self.logger.info(f"Collected {len(section_paragraphs)} paragraphs for section '{section_name}'")
+                        
+                        # Create a document with just this section
+                        if section_paragraphs:
+                            if self.word_document:
+                                # Create a new document with the section
+                                temp_doc = Document()
+                                
+                                # Add section title with appropriate heading style
+                                title_para = temp_doc.add_paragraph(section_name)
+                                try:
+                                    title_para.style = 'Heading 1'
+                                except:
+                                    # If style doesn't exist, manually make it look like a heading
+                                    title_run = title_para.runs[0]
+                                    title_run.bold = True
+                                    title_run.font.size = Pt(16)
+                                
+                                # Add each paragraph from the section
+                                for para in section_paragraphs:
+                                    p = temp_doc.add_paragraph()
+                                    # Copy text and formatting
+                                    for run in para.runs:
+                                        r = p.add_run(run.text)
+                                        r.bold = run.bold
+                                        r.italic = run.italic
+                                        r.underline = run.underline
+                                        if run.font.size:
+                                            r.font.size = run.font.size
+                                        if run.font.name:
+                                            r.font.name = run.font.name
+                                        if run.font.color.rgb:
+                                            r.font.color.rgb = run.font.color.rgb
+                                    
+                                    # Copy paragraph formatting
+                                    try:
+                                        if para.style:
+                                            p.style = para.style.name
+                                        p.paragraph_format.alignment = para.paragraph_format.alignment
+                                        p.paragraph_format.left_indent = para.paragraph_format.left_indent
+                                        p.paragraph_format.right_indent = para.paragraph_format.right_indent
+                                        p.paragraph_format.space_before = para.paragraph_format.space_before
+                                        p.paragraph_format.space_after = para.paragraph_format.space_after
+                                    except:
+                                        pass
+                                
+                                # Save the section to a temporary file
+                                import tempfile
+                                with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp:
+                                    section_path = tmp.name
+                                    temp_doc.save(section_path)
+                                
+                                # Return the template object for insertion
+                                self.logger.info(f"Successfully created section document at {section_path}")
+                                return {"docx_template": section_path}
+                            else:
+                                # If we don't have a word document context, just return the text
+                                return "\n\n".join([para.text for para in section_paragraphs])
+                        else:
+                            self.logger.warning(f"No content found for section '{section_name}'")
+                            return f"[No content found for section '{section_name}']"
+                    else:
+                        self.logger.warning(f"Section '{section_name}' not found in {filename}")
+                        return f"[Section '{section_name}' not found in {filename}]"
+                
                 except ImportError:
-                    return "[Error: python-docx library not available for processing Word documents]"
+                    self.logger.error("python-docx not available for section extraction")
+                    return f"[Error: python-docx library not available for processing Word documents]"
                 except Exception as e:
-                    return f"[Error processing Word document: {str(e)}]"
+                    self.logger.error(f"Error extracting section: {str(e)}", exc_info=True)
+                    return f"[Error extracting section: {str(e)}]"
+            
+            # For Word documents (whole document insertion)
+            elif filename.lower().endswith('.docx') and self.word_document:
+                self.logger.info(f"Processing whole Word document template: {template_path}")
+                # Return the template object for insertion
+                return {"docx_template": template_path}
+            
+            # For all other files or non-section parameters
             else:
-                # Read the file as text for non-docx files
-                with open(template_path, 'r', encoding='utf-8') as file:
-                    file_content = file.read()
-
-            # Check for additional parameters (section, line, paragraph, vars)
-            if len(parts) > 1:
-                param_part = "!".join(parts[1:]) # Rejoin params in case '!' is in value
-
-                 # Handle section/bookmark {{TEMPLATE!filename.docx!section=name}}
-                if param_part.startswith("section="):
-                    section_name = param_part.split("section=")[1].split(",")[0].strip()
-                    # Implement section extraction logic here
-                    return f"[Section {section_name} from {filename}]"
-
-                # Handle specific line {{TEMPLATE!filename.txt!line=5}}
-                elif param_part.startswith("line="):
-                    try:
-                        line_number = int(param_part.split("line=")[1].split(",")[0].strip())
-                        lines = file_content.splitlines()
-                        if 0 <= line_number - 1 < len(lines): # Adjust for 0-based index
-                            return lines[line_number - 1]
-                        return f"[Line {line_number} not found in {filename}]"
-                    except (ValueError, IndexError):
-                         return f"[Invalid line number in {param_part}]"
-
-                # Handle specific paragraph {{TEMPLATE!filename.docx!paragraph=3}}
-                elif param_part.startswith("paragraph="):
-                    try:
-                         para_number = int(param_part.split("paragraph=")[1].split(",")[0].strip())
-                         # Simple paragraph split (might need refinement based on docx structure)
-                         paragraphs = file_content.split("\n\n")
-                         if 0 <= para_number - 1 < len(paragraphs): # Adjust for 0-based index
-                             return paragraphs[para_number - 1]
-                         return f"[Paragraph {para_number} not found in {filename}]"
-                    except (ValueError, IndexError):
-                         return f"[Invalid paragraph number in {param_part}]"
-
-                # Handle variable substitution {{TEMPLATE!filename.docx!VARS(name=John,date=2025-04-01)}}
-                elif param_part.startswith("VARS("):
-                    try:
-                         vars_text = param_part.split("VARS(")[1].split(")")[0]
-                         var_pairs = vars_text.split(",")
-
-                         # Create a dictionary of variables
-                         variables = {}
-                         for pair in var_pairs:
-                             if "=" in pair:
-                                 key, value = pair.split("=", 1)
-                                 # Recursively parse value if it's a keyword
-                                 variables[key.strip()] = self.parse(value.strip())
-
-                         # Replace variables in the template
-                         result = file_content
-                         for key, value in variables.items():
-                             result = result.replace(f"{{{key}}}", str(value)) # Ensure value is string
-
-                         return result
-                    except IndexError:
-                         return f"[Invalid VARS format in {param_part}]"
-
-            # Return the entire file content if no specific parameters
-            return file_content
-
+                # Read the file content
+                try:
+                    if filename.lower().endswith('.docx'):
+                        try:
+                            from docx import Document
+                            doc = Document(template_path)
+                            file_content = "\n\n".join([para.text for para in doc.paragraphs])
+                            # Also extract tables
+                            for table in doc.tables:
+                                table_text = []
+                                for row in table.rows:
+                                    row_text = []
+                                    for cell in row.cells:
+                                        row_text.append(cell.text)
+                                    table_text.append(" | ".join(row_text))
+                                file_content += "\n\n" + "\n".join(table_text)
+                        except ImportError:
+                            self.logger.error("python-docx not available for document extraction")
+                            return f"[Error: python-docx library not available for processing Word documents]"
+                    else:
+                        with open(template_path, 'r', encoding='utf-8') as file:
+                            file_content = file.read()
+                    
+                    # Process specific parameters for text files
+                    if param_part:
+                        # Handle specific line {{TEMPLATE!filename.txt!line=5}}
+                        if param_part.startswith("line="):
+                            try:
+                                line_number = int(param_part.split("line=")[1].split(",")[0].strip())
+                                lines = file_content.splitlines()
+                                if 0 <= line_number - 1 < len(lines):
+                                    return lines[line_number - 1]
+                                return f"[Line {line_number} not found in {filename}]"
+                            except (ValueError, IndexError):
+                                return f"[Invalid line number in {param_part}]"
+                        
+                        # Handle specific paragraph {{TEMPLATE!filename!paragraph=3}}
+                        elif param_part.startswith("paragraph="):
+                            try:
+                                para_number = int(param_part.split("paragraph=")[1].split(",")[0].strip())
+                                paragraphs = file_content.split("\n\n")
+                                if 0 <= para_number - 1 < len(paragraphs):
+                                    return paragraphs[para_number - 1]
+                                return f"[Paragraph {para_number} not found in {filename}]"
+                            except (ValueError, IndexError):
+                                return f"[Invalid paragraph number in {param_part}]"
+                        
+                        # Handle text section {{TEMPLATE!filename.txt!section=name}}
+                        elif param_part.startswith("section=") and not filename.lower().endswith('.docx'):
+                            section_name = param_part.split("section=")[1].split(",")[0].strip()
+                            lines = file_content.splitlines()
+                            section_lines = []
+                            found_section = False
+                            
+                            for line in lines:
+                                # Check for section header
+                                if line.strip().lower() == section_name.lower() or line.strip().lower() == f"{section_name.lower()}:":
+                                    found_section = True
+                                    continue
+                                
+                                # If in a section and hit another section header, stop
+                                if found_section and line.strip() and not line.startswith(' ') and line.strip().endswith(':'):
+                                    break
+                                
+                                # Collect lines in the section
+                                if found_section:
+                                    section_lines.append(line)
+                            
+                            if found_section:
+                                return "\n".join(section_lines)
+                            else:
+                                return f"[Section '{section_name}' not found in {filename}]"
+                        
+                        # Handle variable substitution {{TEMPLATE!filename!VARS(name=John,date=2025-04-01)}}
+                        elif param_part.startswith("VARS("):
+                            try:
+                                vars_text = param_part.split("VARS(")[1].split(")")[0]
+                                var_pairs = vars_text.split(",")
+                                
+                                # Create variables dictionary
+                                variables = {}
+                                for pair in var_pairs:
+                                    if "=" in pair:
+                                        key, value = pair.split("=", 1)
+                                        variables[key.strip()] = self.parse(value.strip())
+                                
+                                # Replace variables in the template
+                                result = file_content
+                                for key, value in variables.items():
+                                    result = result.replace(f"{{{key}}}", str(value) if value is not None else "")
+                                
+                                return result
+                            except Exception as e:
+                                self.logger.error(f"Error processing VARS: {str(e)}")
+                                return f"[Error in VARS: {str(e)}]"
+                        
+                        # Unknown parameter
+                        else:
+                            self.logger.warning(f"Unknown parameter: {param_part}")
+                            return f"[Unknown parameter: {param_part}]"
+                    
+                    # Return the entire file content if no specific parameters
+                    return file_content
+                    
+                except Exception as e:
+                    self.logger.error(f"Error reading template file: {str(e)}")
+                    return f"[Error reading template: {str(e)}]"
         except Exception as e:
-            self.excel_manager.logger.error(f"Error processing TEMPLATE keyword '{content}': {str(e)}", exc_info=True)
+            self.logger.error(f"Error processing template: {str(e)}", exc_info=True)
             return f"[Error in TEMPLATE: {str(e)}]"
 
 
