@@ -182,5 +182,5 @@ logs/*.log
 !logs/.gitkeep
 !logs/__init__.py
 !logs/logger_config.py
-templates/
+!templates/
 
