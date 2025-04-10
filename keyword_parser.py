@@ -967,55 +967,60 @@ class keywordParser:
             A string with help information about available keywords.
         """
         help_text = """
-        ## Keyword System Help (using '!' separator)
+# Keyword System Help
 
-        ### Excel Data Keywords (`{{XL!...}}`)
-        Keywords to fetch data from an Excel file.
+This system uses keywords wrapped in double curly braces `{{}}` with parameters separated by `!`.
 
-        * **`{{XL!CELL!cell_ref}}`**: Get value from a single cell.
-            * Example: `{{XL!CELL!A1}}`
-            * Example with sheet: `{{XL!CELL!SheetName!B5}}`
-        * **`{{XL!LAST!cell_ref}}`**: Get the last non-empty value going down from `cell_ref`.
-            * Example: `{{XL!LAST!A1}}`
-            * Example with sheet: `{{XL!LAST!SheetName!B5}}`
-        * **`{{XL!LAST!sheet_name!cell_ref!Title}}`**: Find column by `Title` in the row of `cell_ref`, then get the last non-empty value below `Title`.
-            * Example: `{{XL!LAST!Items!A4!Total Project Costs}}`
-        * **`{{XL!RANGE!range_ref}}`**: Get values from a range (e.g., `A1:C5` or `NamedRange`). Returns a formatted table.
-            * Example: `{{XL!RANGE!A1:C5}}`
-            * Example with sheet: `{{XL!RANGE!SheetName!A1:C5}}`
-            * Example with named range: `{{XL!RANGE!MyNamedRange}}`
-        * **`{{XL!COLUMN!sheet_name!col_refs}}`**: Get specified columns starting from `col_refs` (e.g., "A1,C1,E1"). Returns a table.
-            * Example: `{{XL!COLUMN!Items!A4,E4,F4}}`
-            * Example: `{{XL!COLUMN!Items!"Activities,HST,Total Project Costs"!4}}` (Finds titles in row 4)
+## Excel Data Keywords (`{{XL!...}}`)
 
-        ### User Input Keywords (`{{INPUT!...}}`)
-        Keywords to create interactive input fields.
+| Keyword | Description | Example | Result |
+|---------|-------------|---------|--------|
+| `{{XL!CELL!A1}}` | Get value from a single cell | `{{XL!CELL!B2}}` | Returns the value in cell B2 |
+| `{{XL!CELL!SheetName!B5}}` | Get value from a cell in a specific sheet | `{{XL!CELL!Sales!C3}}` | Returns the value in cell C3 of the Sales sheet |
+| `{{XL!LAST!A1}}` | Get the last non-empty value going down from A1 | `{{XL!LAST!A1}}` | Returns the last non-empty value in column A |
+| `{{XL!LAST!SheetName!B5}}` | Get last value from a specific sheet | `{{XL!LAST!Inventory!B5}}` | Returns the last non-empty value in column B of the Inventory sheet |
+| `{{XL!LAST!sheet_name!cell_ref!Title}}` | Find column by title and get last value | `{{XL!LAST!Items!A4!Total Project Costs}}` | Finds "Total Project Costs" in row 4 and returns the last value in that column |
+| `{{XL!RANGE!A1:C5}}` | Get values from a range (returns formatted table) | `{{XL!RANGE!A1:D10}}` | Returns a table with all values from A1 to D10 |
+| `{{XL!RANGE!SheetName!A1:C5}}` | Get range from specific sheet | `{{XL!RANGE!Sales!A1:D20}}` | Returns a table from the Sales sheet |
+| `{{XL!RANGE!MyNamedRange}}` | Get values from a named range | `{{XL!RANGE!QuarterlyData}}` | Returns all values in the named range "QuarterlyData" |
+| `{{XL!COLUMN!sheet_name!col_refs}}` | Get specified columns | `{{XL!COLUMN!Items!A4,E4,F4}}` | Returns a table with columns A, E, and F starting from row 4 |
+| `{{XL!COLUMN!sheet_name!titles!row}}` | Get columns by title | `{{XL!COLUMN!Items!"Activities,HST,Total Project Costs"!4}}` | Finds these titles in row 4 and returns their columns |
 
-        * **`{{INPUT!text!label!default_value}}`**: Single-line text input.
-        * **`{{INPUT!area!label!default_value!height}}`**: Multi-line text area (optional height in pixels).
-        * **`{{INPUT!date!label!default_date!format}}`**: Date picker (`default_date` can be 'today' or 'YYYY/MM/DD'). `format` is optional (e.g., 'YYYY/MM/DD', 'DD/MM/YYYY').
-        * **`{{INPUT!select!label!option1,option2,...}}`**: Dropdown selection.
-        * **`{{INPUT!check!label!default_state}}`**: Checkbox (`default_state` is 'True' or 'False').
+## User Input Keywords (`{{INPUT!...}}`)
 
-        ### Template Keywords (`{{TEMPLATE!...}}`)
-        Keywords to include content from other files or libraries.
+| Keyword | Description | Example | Result |
+|---------|-------------|---------|--------|
+| `{{INPUT!text!label!default_value}}` | Single-line text input | `{{INPUT!text!Your Name!John Doe}}` | Creates a text input with label "Your Name" and default value "John Doe" |
+| `{{INPUT!area!label!default_value!height}}` | Multi-line text area | `{{INPUT!area!Comments!Enter your comments here!200}}` | Creates a 200px high text area |
+| `{{INPUT!date!label!default_date!format}}` | Date picker | `{{INPUT!date!Birth Date!1990/01/01!YYYY/MM/DD}}` | Creates a date picker with default date |
+| `{{INPUT!select!label!option1,option2,...}}` | Dropdown selection | `{{INPUT!select!Department!Sales,Marketing,IT,HR}}` | Creates a dropdown with these options |
+| `{{INPUT!check!label!default_state}}` | Checkbox | `{{INPUT!check!Agree to Terms!True}}` | Creates a pre-checked checkbox |
 
-        * **`{{TEMPLATE!filename.docx}}`**: Include entire external template file.
-        * **`{{TEMPLATE!filename.docx!section=name}}`**: Include specific section/bookmark.
-        * **`{{TEMPLATE!filename.txt!line=5}}`**: Include specific line number from text file.
-        * **`{{TEMPLATE!filename.docx!paragraph=3}}`**: Include specific paragraph number.
-        * **`{{TEMPLATE!filename.docx!VARS(key1=val1,key2=val2)}}`**: Template with variable substitution (values can be keywords).
-        * **`{{TEMPLATE!LIBRARY!template_name!version}}`**: Reference template from a predefined library (optional version).
+## Template Keywords (`{{TEMPLATE!...}}`)
 
-        ### JSON Data Keywords (`{{JSON!...}}`)
-        Keywords to fetch data from JSON files using JSONPath.
+| Keyword | Description | Example | Result |
+|---------|-------------|---------|--------|
+| `{{TEMPLATE!filename.docx}}` | Include entire template file | `{{TEMPLATE!contract_template.docx}}` | Includes the entire contract template |
+| `{{TEMPLATE!filename.docx!section=name}}` | Include specific section/bookmark | `{{TEMPLATE!report.docx!section=conclusion}}` | Includes only the conclusion section |
+| `{{TEMPLATE!filename.txt!line=5}}` | Include specific line number | `{{TEMPLATE!config.txt!line=3}}` | Includes only the third line |
+| `{{TEMPLATE!filename.docx!paragraph=3}}` | Include specific paragraph | `{{TEMPLATE!letter.docx!paragraph=2}}` | Includes only the second paragraph |
+| `{{TEMPLATE!filename.docx!VARS(key1=val1,key2=val2)}}` | Template with variable substitution | `{{TEMPLATE!invoice.docx!VARS(client=Acme Corp,date=2024/03/15)}}` | Replaces {client} and {date} in the template |
+| `{{TEMPLATE!LIBRARY!template_name!version}}` | Reference template from library | `{{TEMPLATE!LIBRARY!standard_contract!v2.1}}` | Uses version 2.1 of the standard contract |
 
-        * **`{{JSON!filename.json!json_path}}`**: Access data using JSONPath (e.g., `$.key`, `$.array[0].name`).
-            * Example: `{{JSON!config.json!$.settings.theme}}`
-            * Example: `{{JSON!data.json!$.users[1].email}}`
-        * **`{{JSON!filename.json!json_path!TRANSFORMATION}}`**: Apply optional transformation.
-            * `SUM`: Sum numeric values in an array. (`{{JSON!data.json!$.values!SUM}}`)
-            * `JOIN(delimiter)`: Join array items with a delimiter. (`{{JSON!data.json!$.names!JOIN(,)}}`)
-            * `BOOL(YesText/NoText)`: Transform boolean to custom text. (`{{JSON!config.json!$.enabled!BOOL(Active/Inactive)}}`)
-        """
+## JSON Data Keywords (`{{JSON!...}}`)
+
+| Keyword | Description | Example | Result |
+|---------|-------------|---------|--------|
+| `{{JSON!filename.json!$.key}}` | Access simple JSON path | `{{JSON!config.json!$.settings.theme}}` | Returns the theme value from settings |
+| `{{JSON!data.json!$.array[0].name}}` | Access nested JSON data | `{{JSON!data.json!$.users[1].email}}` | Returns the email of the second user |
+| `{{JSON!data.json!$.values!SUM}}` | Sum numeric values in array | `{{JSON!sales.json!$.monthly_totals!SUM}}` | Sums all monthly totals |
+| `{{JSON!data.json!$.names!JOIN(,)}}` | Join array items with delimiter | `{{JSON!users.json!$.names!JOIN(, )}}` | Joins names with comma and space |
+| `{{JSON!config.json!$.enabled!BOOL(Active/Inactive)}}` | Transform boolean to custom text | `{{JSON!status.json!$.system_active!BOOL(Online/Offline)}}` | Shows "Online" or "Offline" |
+
+## Notes
+- All keywords use `!` as a separator between parameters
+- Keywords can be nested (e.g., inside template variables)
+- File paths can be relative or absolute
+- JSON paths must start with `$.`
+"""
         return help_text 
