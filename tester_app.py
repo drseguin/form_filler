@@ -3,10 +3,17 @@ import os
 import pandas as pd
 import tempfile
 import json
+import logging
 from excel_manager import excelManager
 from keyword_parser import keywordParser
+from logs.logger_config import setup_logger
+
+# Setup logger
+logger = setup_logger('tester_app')
 
 st.title("Excel Manager App")
+
+logger.info("Tester application started")
 
 # Load custom CSS
 with open('style.css') as f:
@@ -39,11 +46,14 @@ if uploaded_file is not None:
     with open(file_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
     
+    logger.info(f"Uploaded file saved to {file_path}")
+    
     # Initialize ExcelManager with the uploaded file
     st.session_state.excel_manager = excelManager(file_path)
     st.session_state.keyword_parser = keywordParser(st.session_state.excel_manager)
     st.session_state.file_path = file_path
     st.sidebar.success(f"Loaded: {uploaded_file.name}")
+    logger.info(f"Excel manager initialized with {uploaded_file.name}")
 
 # Create new file
 new_file_name = st.sidebar.text_input("Or create a new file (name.xlsx):")
@@ -52,16 +62,20 @@ if st.sidebar.button("Create New File") and new_file_name:
         new_file_name += '.xlsx'
     
     file_path = os.path.join(st.session_state.temp_dir, new_file_name)
+    logger.info(f"Creating new Excel file at {file_path}")
     st.session_state.excel_manager = excelManager()
     st.session_state.excel_manager.create_workbook(file_path)
     st.session_state.keyword_parser = keywordParser(st.session_state.excel_manager)
     st.session_state.file_path = file_path
     st.sidebar.success(f"Created: {new_file_name}")
+    logger.info(f"Created new Excel file: {new_file_name}")
 
 # Reset app
 if st.sidebar.button("Reset"):
+    logger.info("Resetting tester application")
     reset_app()
     st.sidebar.success("Reset complete")
+    logger.info("Reset complete")
 
 # Main content
 if st.session_state.excel_manager is not None:

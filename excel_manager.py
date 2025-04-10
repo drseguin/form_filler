@@ -6,16 +6,17 @@ from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter, column_index_from_string
 from openpyxl.utils.cell import coordinate_from_string, coordinate_to_tuple
 import re
+from logs.logger_config import setup_logger
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("logs/excel_manager.log"),
-        logging.StreamHandler()
-    ]
-)
+# Configure logging - replaced with centralized logger
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+#     handlers=[
+#         logging.FileHandler("logs/excel_manager.log"),
+#         logging.StreamHandler()
+#     ]
+# )
 
 class excelManager:
     def __init__(self, file_path=None):
@@ -23,7 +24,7 @@ class excelManager:
         Initialize the ExcelManager with an optional file path.
         If no file path is provided, operations will require a file path.
         """
-        self.logger = logging.getLogger(__name__)
+        self.logger = setup_logger('excel_manager')
         self.file_path = file_path
         self.workbook = None
         self.formula_workbook = None

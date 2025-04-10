@@ -5,9 +5,14 @@ import re
 import docx
 import tempfile
 import time
+import logging
 from excel_manager import excelManager # Assuming excel_manager.py is in the same directory
 from keyword_parser import keywordParser # Assuming keyword_parser.py is in the same directory
 from collections import Counter
+from logs.logger_config import setup_logger
+
+# Setup logger
+logger = setup_logger('main')
 
 def preprocess_word_doc(doc_path):
     """
@@ -19,6 +24,7 @@ def preprocess_word_doc(doc_path):
     Returns:
         Dictionary with keyword counts and whether Excel file is needed
     """
+    logger.info(f"Preprocessing Word document: {doc_path}")
     doc = docx.Document(doc_path)
     pattern = r'{{(.*?)}}'
 
@@ -120,6 +126,10 @@ def process_word_doc(doc_path, excel_path=None, parser=None):
     Returns:
         Processed document object and a count of replaced keywords
     """
+    logger.info(f"Starting document processing: {doc_path}")
+    if excel_path:
+        logger.info(f"Using Excel file: {excel_path}")
+        
     if not parser:
         raise ValueError("KeywordParser instance is required.")
 
@@ -139,8 +149,11 @@ def process_word_doc(doc_path, excel_path=None, parser=None):
     for paragraph in elements_to_scan:
         total_keywords_initial += len(re.findall(pattern, paragraph.text))
 
+    logger.info(f"Found {total_keywords_initial} keywords in document")
+    
     if total_keywords_initial == 0:
         st.warning("No keywords found in the document.")
+        logger.warning("No keywords found in the document")
         return doc, 0
 
     progress_bar = st.progress(0)
@@ -307,6 +320,8 @@ def main():
     with open('style.css') as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
     
+    logger.info("Application started")
+    
     # Create a container for the logo (top left) and app intro
     header_container = st.container()
     with header_container:
@@ -335,10 +350,17 @@ def main():
     col1, col2 = st.columns([5, 1])
     with col2:
         if st.button("Reset"):
+            logger.info("Resetting application state")
             # Clean up temp files
-            if st.session_state.doc_path and os.path.exists(st.session_state.doc_path): os.unlink(st.session_state.doc_path)
-            if st.session_state.excel_path and os.path.exists(st.session_state.excel_path): os.unlink(st.session_state.excel_path)
-            if st.session_state.processed_doc_path and os.path.exists(st.session_state.processed_doc_path): os.unlink(st.session_state.processed_doc_path)
+            if st.session_state.doc_path and os.path.exists(st.session_state.doc_path): 
+                os.unlink(st.session_state.doc_path)
+                logger.info(f"Removed temporary document: {st.session_state.doc_path}")
+            if st.session_state.excel_path and os.path.exists(st.session_state.excel_path): 
+                os.unlink(st.session_state.excel_path)
+                logger.info(f"Removed temporary Excel file: {st.session_state.excel_path}")
+            if st.session_state.processed_doc_path and os.path.exists(st.session_state.processed_doc_path): 
+                os.unlink(st.session_state.processed_doc_path)
+                logger.info(f"Removed processed document: {st.session_state.processed_doc_path}")
             # Close Excel Manager if open
             if st.session_state.excel_manager_instance: st.session_state.excel_manager_instance.close()
             # Reset state variables
@@ -469,6 +491,7 @@ def main():
                                 
                                 st.session_state.form_submitted_main = True
                                 st.success("Inputs submitted.")
+                                logger.info("Form inputs submitted")
                                 st.rerun()
                     else:
                         st.success("Inputs already submitted.")
@@ -515,6 +538,7 @@ def main():
                             st.session_state.processed_doc_path = output_path
                             st.session_state.processed_count = count
                             st.success(f"Processing Complete! Approximately {count} keywords processed.")
+                            logger.info(f"Document processed successfully. Saved to {output_path}. {count} keywords processed.")
                             # Rerun needed to show download button correctly after processing finishes
                             st.rerun()
                         else:

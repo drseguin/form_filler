@@ -3,6 +3,7 @@ import re
 import json
 import os
 import streamlit as st
+import logging
 from datetime import date, datetime
 from excel_manager import excelManager
 from docx.shared import Pt, Cm
@@ -11,6 +12,7 @@ from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from logs.logger_config import setup_logger
 
 class keywordParser:
     """
@@ -26,16 +28,19 @@ class keywordParser:
             excel_manager: An instance of excelManager to use for Excel operations.
                            If None, a new instance will be created when needed.
         """
+        self.logger = setup_logger('keyword_parser')
         self.excel_manager = excel_manager
         self.pattern = r'{{(.*?)}}'
         self.has_input_fields = False
         self.form_submitted = False
         self.word_document = None
         self.input_values = {}  # Store input values
+        self.logger.info("Initialized keywordParser")
 
     def set_word_document(self, doc):
         """Set the word document for direct table insertion."""
         self.word_document = doc
+        self.logger.info("Word document set for table insertion")
 
     def parse(self, input_string):
         """

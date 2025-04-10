@@ -176,3 +176,10 @@ tmp/
 tmp_processed_main/
 logs/
 
+# Logs
+logs/*.log
+# Keep the logs directory structure
+!logs/.gitkeep
+!logs/__init__.py
+!logs/logger_config.py
+
