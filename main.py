@@ -209,8 +209,130 @@ def process_word_doc(doc_path, excel_path=None, parser=None):
                 # parser.parse will handle replacements, including potential table creation
                 parsed_result = parser.parse(original_text)
 
+                # Check if we got a dict with a docx template
+                if isinstance(parsed_result, dict) and "docx_template" in parsed_result:
+                    try:
+                        # Update the paragraph's text with any text content
+                        paragraph.text = parsed_result["text"]
+                        
+                        # Get the template path from our result
+                        template_path = parsed_result["docx_template"]
+                        
+                        # Load the template document with proper formatting
+                        template_doc = docx.Document(template_path)
+                        
+                        # Insert the template document at the current paragraph location
+                        paragraph_element = paragraph._element
+                        paragraph_parent = paragraph_element.getparent()
+                        paragraph_index = paragraph_parent.index(paragraph_element)
+                        
+                        # For each paragraph in the template, add it to the main document
+                        for p in template_doc.paragraphs:
+                            # Create a new paragraph in the main document
+                            new_p = doc.add_paragraph()
+                            # Copy over the paragraph's runs with their formatting
+                            for run in p.runs:
+                                new_run = new_p.add_run(run.text)
+                                # Copy formatting from the original run
+                                new_run.bold = run.bold
+                                new_run.italic = run.italic
+                                new_run.underline = run.underline
+                                if run.font.size:
+                                    new_run.font.size = run.font.size
+                                if run.font.name:
+                                    new_run.font.name = run.font.name
+                                if run.font.color.rgb:
+                                    new_run.font.color.rgb = run.font.color.rgb
+                            
+                            # Copy paragraph formatting
+                            if p.style:
+                                try:
+                                    new_p.style = p.style.name
+                                except:
+                                    pass  # Style might not exist in target document
+                            new_p.paragraph_format.alignment = p.paragraph_format.alignment
+                            new_p.paragraph_format.left_indent = p.paragraph_format.left_indent
+                            new_p.paragraph_format.right_indent = p.paragraph_format.right_indent
+                            new_p.paragraph_format.space_before = p.paragraph_format.space_before
+                            new_p.paragraph_format.space_after = p.paragraph_format.space_after
+                            
+                            # Position the new paragraph in the right place
+                            new_p_element = new_p._element
+                            # Remove it from wherever it was added automatically
+                            new_p_element.getparent().remove(new_p_element)
+                            # Insert at the right position
+                            paragraph_index += 1
+                            paragraph_parent.insert(paragraph_index, new_p_element)
+                        
+                        # For each table in the template, add it to the main document
+                        for table in template_doc.tables:
+                            # Create a new table in the main document with the same dimensions
+                            rows = len(table.rows)
+                            cols = len(table.columns)
+                            new_table = doc.add_table(rows=rows, cols=cols)
+                            
+                            # Copy table style if it exists
+                            if table.style:
+                                try:
+                                    new_table.style = table.style
+                                except:
+                                    pass  # Style might not exist in target document
+                            
+                            # Copy cell by cell
+                            for i, row in enumerate(table.rows):
+                                for j, cell in enumerate(row.cells):
+                                    target_cell = new_table.cell(i, j)
+                                    # Clear any default paragraph
+                                    for p in target_cell.paragraphs:
+                                        p._element.getparent().remove(p._element)
+                                    
+                                    # Copy each paragraph from source cell
+                                    for p in cell.paragraphs:
+                                        cell_p = target_cell.add_paragraph()
+                                        for run in p.runs:
+                                            cell_run = cell_p.add_run(run.text)
+                                            cell_run.bold = run.bold
+                                            cell_run.italic = run.italic
+                                            cell_run.underline = run.underline
+                                            if run.font.size:
+                                                cell_run.font.size = run.font.size
+                                            if run.font.name:
+                                                cell_run.font.name = run.font.name
+                                            if run.font.color.rgb:
+                                                cell_run.font.color.rgb = run.font.color.rgb
+                                            
+                                        if p.style:
+                                            try:
+                                                cell_p.style = p.style.name
+                                            except:
+                                                pass
+                                        cell_p.paragraph_format.alignment = p.paragraph_format.alignment
+                            
+                            # Position the new table in the right place
+                            new_table_element = new_table._element
+                            # Remove it from wherever it was added automatically
+                            new_table_element.getparent().remove(new_table_element)
+                            # Insert at the right position
+                            paragraph_index += 1
+                            paragraph_parent.insert(paragraph_index, new_table_element)
+                            
+                            # Add a blank paragraph after the table to prevent merging
+                            blank_p = doc.add_paragraph()
+                            blank_p_element = blank_p._element
+                            blank_p_element.getparent().remove(blank_p_element)
+                            paragraph_index += 1
+                            paragraph_parent.insert(paragraph_index, blank_p_element)
+                        
+                        # Count as processed (we processed the entire keyword that produced the template)
+                        processed_keywords_count += 1
+                    except Exception as e:
+                        st.error(f"Error inserting template document: {str(e)}")
+                        logger.error(f"Error inserting template document: {str(e)}", exc_info=True)
+                        # If template insertion fails, keep original text
+                        paragraph.text = original_text
+
                 # Check if we got a dict with a table object
-                if isinstance(parsed_result, dict) and "table" in parsed_result:
+                elif isinstance(parsed_result, dict) and "table" in parsed_result:
                     try:
                         # Update the paragraph's text with any text content
                         paragraph.text = parsed_result["text"]

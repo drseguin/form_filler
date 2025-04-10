@@ -104,6 +104,8 @@ class keywordParser:
         result = input_string
         table_to_insert = None
         table_keyword = None
+        docx_template_to_insert = None
+        docx_template_keyword = None
 
         for match in matches:
             keyword = match.group(0)  # Full keyword with {{}}
@@ -115,8 +117,16 @@ class keywordParser:
             else:
                 replacement = self._process_keyword(content)
 
+            # Check if we got a docx template path back
+            if isinstance(replacement, dict) and "docx_template" in replacement:
+                # For a Word document template, we want to remember it but not do text replacement yet
+                docx_template_to_insert = replacement["docx_template"]
+                docx_template_keyword = keyword
+                # Don't do text replacement for this keyword yet
+                continue
+                
             # Check if we got a table object back
-            if isinstance(replacement, dict) and "table_object" in replacement:
+            elif isinstance(replacement, dict) and "table_object" in replacement:
                 # For a table, we want to remember it but not do text replacement yet
                 table_to_insert = replacement["table_object"]
                 table_keyword = keyword
@@ -127,8 +137,17 @@ class keywordParser:
             # Ensure replacement is string, handle potential None values
             result = result.replace(keyword, str(replacement) if replacement is not None else "", 1)
 
-        # If we have a table to insert and this is the only content, return a special object
-        if table_to_insert and result.strip() == input_string.strip():
+        # Handle template insertion with priority over table
+        if docx_template_to_insert and result.strip() == input_string.strip():
+            # If the only content was the template keyword, return a special object
+            return {"text": "", "docx_template": docx_template_to_insert, "keyword": docx_template_keyword}
+        elif docx_template_to_insert:
+            # If there was a template keyword and other text, still return both
+            # Replace the template keyword with an empty string in the result
+            result = result.replace(docx_template_keyword, "", 1)
+            return {"text": result, "docx_template": docx_template_to_insert, "keyword": docx_template_keyword}
+        # Then handle table insertion if no template
+        elif table_to_insert and result.strip() == input_string.strip():
             # If the only content was the table keyword, return a dict with both
             return {"text": "", "table": table_to_insert, "keyword": table_keyword}
         elif table_to_insert:
@@ -755,14 +774,48 @@ class keywordParser:
                      return f"[Template Library: {template_name} (Version: {template_version})]"
                  return "[Invalid library template reference]"
 
+            # Always look in the templates directory
+            template_path = os.path.join('templates', filename)
 
             # Handle file-based templates
-            if not os.path.exists(filename):
-                return f"[Template file not found: {filename}]"
+            if not os.path.exists(template_path):
+                return f"[Template file not found: {template_path}]"
 
-            # Read the file
-            with open(filename, 'r', encoding='utf-8') as file: # Added encoding
-                file_content = file.read()
+            # Check if the file is a Word document (.docx)
+            if filename.lower().endswith('.docx'):
+                try:
+                    from docx import Document
+                    
+                    # For docx files, we need to preserve formatting
+                    # Instead of extracting text, return the document object directly
+                    if self.word_document:
+                        # If we have a document object, we'll return a special object 
+                        # that signals we want to insert the entire document with formatting
+                        return {"docx_template": template_path}
+                    else:
+                        # If we don't have a document object (e.g., in testing),
+                        # we'll fallback to text extraction
+                        doc = Document(template_path)
+                        file_content = "\n\n".join([paragraph.text for paragraph in doc.paragraphs])
+                        
+                        # If there are tables, extract their content as well
+                        for table in doc.tables:
+                            table_text = []
+                            for row in table.rows:
+                                row_text = []
+                                for cell in row.cells:
+                                    row_text.append(cell.text)
+                                table_text.append(" | ".join(row_text))
+                            file_content += "\n\n" + "\n".join(table_text)
+                        return file_content
+                except ImportError:
+                    return "[Error: python-docx library not available for processing Word documents]"
+                except Exception as e:
+                    return f"[Error processing Word document: {str(e)}]"
+            else:
+                # Read the file as text for non-docx files
+                with open(template_path, 'r', encoding='utf-8') as file:
+                    file_content = file.read()
 
             # Check for additional parameters (section, line, paragraph, vars)
             if len(parts) > 1:
@@ -785,7 +838,6 @@ class keywordParser:
                     except (ValueError, IndexError):
                          return f"[Invalid line number in {param_part}]"
 
-
                 # Handle specific paragraph {{TEMPLATE!filename.docx!paragraph=3}}
                 elif param_part.startswith("paragraph="):
                     try:
@@ -797,7 +849,6 @@ class keywordParser:
                          return f"[Paragraph {para_number} not found in {filename}]"
                     except (ValueError, IndexError):
                          return f"[Invalid paragraph number in {param_part}]"
-
 
                 # Handle variable substitution {{TEMPLATE!filename.docx!VARS(name=John,date=2025-04-01)}}
                 elif param_part.startswith("VARS("):
@@ -813,7 +864,6 @@ class keywordParser:
                                  # Recursively parse value if it's a keyword
                                  variables[key.strip()] = self.parse(value.strip())
 
-
                          # Replace variables in the template
                          result = file_content
                          for key, value in variables.items():
@@ -822,7 +872,6 @@ class keywordParser:
                          return result
                     except IndexError:
                          return f"[Invalid VARS format in {param_part}]"
-
 
             # Return the entire file content if no specific parameters
             return file_content
@@ -1016,7 +1065,7 @@ This system uses keywords wrapped in double curly braces `{{}}` with parameters 
 | `{{TEMPLATE!filename.docx!section=name}}` | Include specific section/bookmark | `{{TEMPLATE!report.docx!section=conclusion}}` | Includes only the conclusion section |
 | `{{TEMPLATE!filename.txt!line=5}}` | Include specific line number | `{{TEMPLATE!config.txt!line=3}}` | Includes only the third line |
 | `{{TEMPLATE!filename.docx!paragraph=3}}` | Include specific paragraph | `{{TEMPLATE!letter.docx!paragraph=2}}` | Includes only the second paragraph |
-| `{{TEMPLATE!filename.docx!VARS(key1=val1,key2=val2)}}` | Template with variable substitution | `{{TEMPLATE!invoice.docx!VARS(client=Acme Corp,date=2024/03/15)}}` | Replaces {client} and {date} in the template |
+| `{{TEMPLATE!filename.docx!VARS(name=John,date=2025-04-01)}}` | Template with variable substitution | `{{TEMPLATE!invoice.docx!VARS(client=Acme Corp,date=2024/03/15)}}` | Replaces {client} and {date} in the template |
 | `{{TEMPLATE!LIBRARY!template_name!version}}` | Reference template from library | `{{TEMPLATE!LIBRARY!standard_contract!v2.1}}` | Uses version 2.1 of the standard contract |
 
 ## JSON Data Keywords (`{{JSON!...}}`)
