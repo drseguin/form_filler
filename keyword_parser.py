@@ -35,6 +35,13 @@ class keywordParser:
         self.form_submitted = False
         self.word_document = None
         self.input_values = {}  # Store input values
+        
+        # Ensure templates directory exists
+        templates_dir = 'templates'
+        if not os.path.exists(templates_dir):
+            os.makedirs(templates_dir)
+            self.logger.info(f"Created templates directory: {templates_dir}")
+        
         self.logger.info("Initialized keywordParser")
 
     def set_word_document(self, doc):
