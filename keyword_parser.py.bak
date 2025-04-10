@@ -778,14 +778,8 @@ class keywordParser:
         if not param_part.startswith("section="):
             return None
         
-        # Extract the section parameter value without splitting on commas
-        # This ensures section names containing commas like "Millionaires' Row" are preserved
-        section_spec = param_part[len("section="):].strip()
-        
-        # If there are other parameters after the section parameter, they would be indicated by another marker
-        # like "section=SectionName&param2=value2" or similar
-        if "&" in section_spec:
-            section_spec = section_spec.split("&")[0].strip()
+        # Extract the section parameter value
+        section_spec = param_part.split("section=")[1].split(",")[0].strip()
         
         # Check if it's a section range (contains :)
         if ":" in section_spec:
@@ -839,37 +833,21 @@ class keywordParser:
             
             # For Word documents with section parameter
             if filename.lower().endswith('.docx') and has_section:
-                # Get the section info (single section or section range)
+                # Parse section parameter
                 section_info = self._parse_section_param(param_part)
-                start_section = section_info['start'] 
+                self.logger.info(f"Section info: {section_info}")
+                
+                start_section = section_info['start']
                 end_section = section_info['end']
                 
                 if end_section:
-                    self.logger.info(f"Processing section range from '{start_section}' to '{end_section}'")
+                    self.logger.info(f"Processing section range: '{start_section}' to '{end_section}'")
                 else:
-                    self.logger.info(f"Processing single section '{start_section}'")
-                
+                    self.logger.info(f"Processing single section: '{start_section}'")
+                    
                 try:
                     from docx import Document
                     doc = Document(template_path)
-                    
-                    # DEBUG: Log all paragraphs that look like headings or titles
-                    self.logger.info(f"DEBUG: Looking for section '{start_section}' in document")
-                    debug_headings = []
-                    for i, para in enumerate(doc.paragraphs):
-                        # Check if this is a heading-like paragraph
-                        is_heading = para.style and "heading" in para.style.name.lower()
-                        is_title = (para.text.strip() and 
-                                   len(para.text.strip()) < 100 and 
-                                   not para.text.strip().endswith('.') and
-                                   not para.text.strip().endswith(','))
-                        
-                        if is_heading or is_title:
-                            debug_headings.append(f"{i}: '{para.text.strip()}'")
-                    
-                    self.logger.info(f"DEBUG: All potential section headings found:")
-                    for heading in debug_headings:
-                        self.logger.info(f"  {heading}")
                     
                     # Find sections and extract content
                     found_start = False
@@ -877,10 +855,10 @@ class keywordParser:
                     section_start_index = -1
                     section_end_index = -1
                     
-                    # Store all heading-like paragraphs for debugging
+                    # Map of all headings for debugging
                     headings = []
                     
-                    # First pass: find start and end sections by headings or standalone titles
+                    # First pass: look for start and end by headings
                     for i, para in enumerate(doc.paragraphs):
                         # Check if this is a heading-like paragraph
                         is_heading = para.style and "heading" in para.style.name.lower()
@@ -890,68 +868,29 @@ class keywordParser:
                                    not para.text.strip().endswith(','))
                         
                         if is_heading or is_title:
-                            heading_text = para.text.strip()
-                            headings.append((i, heading_text))
+                            headings.append((i, para.text.strip()))
                             
-                            # For Debug - Add this line
-                            self.logger.info(f"Comparing heading '{heading_text}' with section '{start_section}'")
-                            
-                            # Look for start section with exact matching as first priority
-                            if not found_start and heading_text == start_section:
+                            # Look for start section
+                            if not found_start and (start_section.lower() == para.text.strip().lower() or
+                                                   start_section.lower() in para.text.strip().lower()):
                                 found_start = True
                                 section_start_index = i + 1  # Start after this heading
-                                self.logger.info(f"Found start section (exact match) at paragraph {i}: '{heading_text}'")
-                            # Then try normalized comparison if exact match fails
-                            elif not found_start:
-                                # Normalize texts for comparison to handle apostrophes and special characters
-                                norm_heading = self._normalize_text(heading_text)
-                                norm_start_section = self._normalize_text(start_section)
-                                
-                                # Try exact match with normalized text
-                                if norm_heading == norm_start_section:
-                                    found_start = True
-                                    section_start_index = i + 1  # Start after this heading
-                                    self.logger.info(f"Found start section (normalized match) at paragraph {i}: '{heading_text}'")
-                                # Then try if heading contains the section name
-                                elif norm_start_section in norm_heading:
-                                    found_start = True
-                                    section_start_index = i + 1  # Start after this heading
-                                    self.logger.info(f"Found start section (contains match) at paragraph {i}: '{heading_text}'")
-                                # Finally try if section name contains the heading (for when user gives too much detail)
-                                elif len(norm_start_section) > 5 and norm_heading in norm_start_section:
-                                    found_start = True
-                                    section_start_index = i + 1  # Start after this heading
-                                    self.logger.info(f"Found start section (reverse match) at paragraph {i}: '{heading_text}'")
+                                self.logger.info(f"Found start section at paragraph {i}: '{para.text}'")
                             
                             # Look for end section if specified
-                            elif found_start and end_section:
-                                # First try exact match
-                                if heading_text == end_section:
-                                    found_end = True
-                                    section_end_index = i  # End before this heading
-                                    self.logger.info(f"Found end section (exact match) at paragraph {i}: '{heading_text}'")
-                                else:
-                                    # Try normalized comparison
-                                    norm_heading = self._normalize_text(heading_text)
-                                    norm_end_section = self._normalize_text(end_section)
-                                    
-                                    # Try exact match with normalized text
-                                    if norm_heading == norm_end_section:
-                                        found_end = True
-                                        section_end_index = i  # End before this heading
-                                        self.logger.info(f"Found end section (normalized match) at paragraph {i}: '{heading_text}'")
-                                    # Then try if heading contains the section name
-                                    elif norm_end_section in norm_heading:
-                                        found_end = True
-                                        section_end_index = i  # End before this heading
-                                        self.logger.info(f"Found end section (contains match) at paragraph {i}: '{heading_text}'")
+                            elif found_start and end_section and (end_section.lower() == para.text.strip().lower() or
+                                                               end_section.lower() in para.text.strip().lower()):
+                                found_end = True
+                                section_end_index = i  # End before this heading
+                                self.logger.info(f"Found end section at paragraph {i}: '{para.text}'")
+                                break
                             
-                            # If we found the start and no specific end was requested,
-                            # any subsequent heading ends the section
+                            # If we've found the start and no specific end is required,
+                            # any next heading marks the end of the section
                             elif found_start and not end_section:
                                 found_end = True
                                 section_end_index = i
-                                self.logger.info(f"Found next heading at paragraph {i}: '{heading_text}'")
+                                self.logger.info(f"Found next heading at paragraph {i}: '{para.text}'")
                                 break
                     
                     # If we didn't find start by heading match, try exact text match
@@ -996,71 +935,79 @@ class keywordParser:
                         
                     self.logger.info(f"Extracted {len(section_paragraphs)} paragraphs")
                     
-                    # Always create a document, regardless of paragraph count
-                    from docx import Document
-                    temp_doc = Document()
-                    
-                    # Add title with section name
-                    title_para = temp_doc.add_paragraph(start_section)
-                    try:
-                        title_para.style = 'Heading 1'
-                    except:
-                        # Manually style if needed
-                        title_run = title_para.runs[0]
-                        title_run.bold = True
-                        title_run.font.size = Pt(16)
-                    
-                    # Copy all paragraphs with formatting
-                    for para in section_paragraphs:
-                        p = temp_doc.add_paragraph()
-                        # Copy text and formatting
-                        for run in para.runs:
-                            r = p.add_run(run.text)
-                            r.bold = run.bold
-                            r.italic = run.italic
-                            r.underline = run.underline
-                            if run.font.size:
-                                r.font.size = run.font.size
-                            if run.font.name:
-                                r.font.name = run.font.name
-                            if run.font.color.rgb:
-                                r.font.color.rgb = run.font.color.rgb
+                    # Create a new document with just the section content
+                    if self.word_document:
+                        temp_doc = Document()
                         
-                        # Copy paragraph formatting
+                        # Add title with section name
+                        title_para = temp_doc.add_paragraph(start_section)
                         try:
-                            if para.style:
-                                p.style = para.style.name
-                            p.paragraph_format.alignment = para.paragraph_format.alignment
-                            p.paragraph_format.left_indent = para.paragraph_format.left_indent
-                            p.paragraph_format.right_indent = para.paragraph_format.right_indent
-                            p.paragraph_format.space_before = para.paragraph_format.space_before
-                            p.paragraph_format.space_after = para.paragraph_format.space_after
+                            title_para.style = 'Heading 1'
                         except:
-                            pass
+                            # Manually style if needed
+                            title_run = title_para.runs[0]
+                            title_run.bold = True
+                            title_run.font.size = Pt(16)
+                        
+                        # Copy all paragraphs with formatting
+                        for para in section_paragraphs:
+                            p = temp_doc.add_paragraph()
+                            # Copy text and formatting
+                            for run in para.runs:
+                                r = p.add_run(run.text)
+                                r.bold = run.bold
+                                r.italic = run.italic
+                                r.underline = run.underline
+                                if run.font.size:
+                                    r.font.size = run.font.size
+                                if run.font.name:
+                                    r.font.name = run.font.name
+                                if run.font.color.rgb:
+                                    r.font.color.rgb = run.font.color.rgb
+                            
+                            # Copy paragraph formatting
+                            try:
+                                if para.style:
+                                    p.style = para.style.name
+                                p.paragraph_format.alignment = para.paragraph_format.alignment
+                                p.paragraph_format.left_indent = para.paragraph_format.left_indent
+                                p.paragraph_format.right_indent = para.paragraph_format.right_indent
+                                p.paragraph_format.space_before = para.paragraph_format.space_before
+                                p.paragraph_format.space_after = para.paragraph_format.space_after
+                            except:
+                                pass
+                        
+                        # Save to temporary file
+                        import tempfile
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp:
+                            section_path = tmp.name
+                            temp_doc.save(section_path)
+                        
+                        self.logger.info(f"Created section document at {section_path}")
+                        return {"docx_template": section_path}
+                    else:
+                        # Return as plain text if not in a Word context
+                        return "\n\n".join([para.text for para in section_paragraphs])
                     
-                    # Save to temporary file
-                    import tempfile
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp:
-                        section_path = tmp.name
-                        temp_doc.save(section_path)
-                    
-                    self.logger.info(f"Created section document at {section_path}")
-                    return {"docx_template": section_path}
                 except ImportError:
                     self.logger.error("python-docx library not available")
                     return f"[Error: python-docx library not available]"
                 except Exception as e:
                     self.logger.error(f"Error extracting section: {str(e)}", exc_info=True)
-                    return f"[Error extracting section: {str(e)}]"
-            # Handle Word documents with no parameters (include whole document)
-            elif filename.lower().endswith('.docx') and not param_part:
-                self.logger.info(f"Including entire document: {template_path}")
-                # Return the template path to be inserted
-                return {"docx_template": template_path}
-            else:
-                # Unknown parameter
-                self.logger.warning(f"Unknown parameter: {param_part}")
-                return f"[Unknown parameter: {param_part}]"
+                                self.logger.error(f"Error processing VARS: {str(e)}")
+                                return f"[Error in VARS: {str(e)}]"
+                        
+                        # Unknown parameter
+                        else:
+                            self.logger.warning(f"Unknown parameter: {param_part}")
+                            return f"[Unknown parameter: {param_part}]"
+                    
+                    # Return the entire file content if no specific parameters
+                    return file_content
+                    
+                except Exception as e:
+                    self.logger.error(f"Error reading template file: {str(e)}")
+                    return f"[Error reading template: {str(e)}]"
         except Exception as e:
             self.logger.error(f"Error processing template: {str(e)}", exc_info=True)
             return f"[Error in TEMPLATE: {str(e)}]"
@@ -1247,8 +1194,7 @@ This system uses keywords wrapped in double curly braces `{{}}` with parameters 
 | Keyword | Description | Example | Result |
 |---------|-------------|---------|--------|
 | `{{TEMPLATE!filename.docx}}` | Include entire template file | `{{TEMPLATE!contract_template.docx}}` | Includes the entire contract template |
-| `{{TEMPLATE!filename.docx!section=name}}` | Include specific section by heading/title | `{{TEMPLATE!report.docx!section=conclusion}}` | Includes only the conclusion section |
-| `{{TEMPLATE!filename.docx!section=start:end}}` | Include range from start to end section | `{{TEMPLATE!report.docx!section=intro:methodology}}` | Includes content from intro up to methodology section |
+| `{{TEMPLATE!filename.docx!section=name}}` | Include specific section/bookmark | `{{TEMPLATE!report.docx!section=conclusion}}` | Includes only the conclusion section |
 | `{{TEMPLATE!filename.txt!line=5}}` | Include specific line number | `{{TEMPLATE!config.txt!line=3}}` | Includes only the third line |
 | `{{TEMPLATE!filename.docx!paragraph=3}}` | Include specific paragraph | `{{TEMPLATE!letter.docx!paragraph=2}}` | Includes only the second paragraph |
 | `{{TEMPLATE!filename.docx!VARS(name=John,date=2025-04-01)}}` | Template with variable substitution | `{{TEMPLATE!invoice.docx!VARS(client=Acme Corp,date=2024/03/15)}}` | Replaces {client} and {date} in the template |
@@ -1271,31 +1217,3 @@ This system uses keywords wrapped in double curly braces `{{}}` with parameters 
 - JSON paths must start with `$.`
 """
         return help_text 
-
-    def _normalize_text(self, text):
-        """Normalize text for section name comparison to handle apostrophe variations and special characters."""
-        if not text:
-            return ""
-        
-        # Convert to lowercase
-        normalized = text.lower()
-        
-        # Replace various apostrophe types with a standard one (ASCII apostrophe)
-        apostrophes = ["'", "'", "′", "‵", "´", "`", "′", "ʼ", "ʻ", "ʾ", "ʿ", "̓ ", "̕", "̔", "̛"]
-        for apostrophe in apostrophes:
-            if apostrophe != "'":  # Keep the standard apostrophe but replace others
-                normalized = normalized.replace(apostrophe, "'")
-        
-        # Replace quotes with standard quotes
-        quotes = [""", """, "„", "‟"]
-        for quote in quotes:
-            normalized = normalized.replace(quote, '"')
-        
-        # Remove other punctuation that might cause mismatches but preserve apostrophes
-        for char in [',', '.', ':', ';', '!', '?', '-', '_', '(', ')', '[', ']', '{', '}', '/']:
-            normalized = normalized.replace(char, " ")
-        
-        # Remove extra whitespace, including at start and end
-        normalized = " ".join(normalized.split())
-        
-        return normalized 
