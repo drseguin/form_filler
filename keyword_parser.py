@@ -1246,13 +1246,9 @@ This system uses keywords wrapped in double curly braces `{{}}` with parameters 
 
 | Keyword | Description | Example | Result |
 |---------|-------------|---------|--------|
-| `{{TEMPLATE!filename.docx}}` | Include entire template file | `{{TEMPLATE!contract_template.docx}}` | Includes the entire contract template |
-| `{{TEMPLATE!filename.docx!section=name}}` | Include specific section by heading/title | `{{TEMPLATE!report.docx!section=conclusion}}` | Includes only the conclusion section |
-| `{{TEMPLATE!filename.docx!section=start:end}}` | Include range from start to end section | `{{TEMPLATE!report.docx!section=intro:methodology}}` | Includes content from intro up to methodology section |
-| `{{TEMPLATE!filename.txt!line=5}}` | Include specific line number | `{{TEMPLATE!config.txt!line=3}}` | Includes only the third line |
-| `{{TEMPLATE!filename.docx!paragraph=3}}` | Include specific paragraph | `{{TEMPLATE!letter.docx!paragraph=2}}` | Includes only the second paragraph |
-| `{{TEMPLATE!filename.docx!VARS(name=John,date=2025-04-01)}}` | Template with variable substitution | `{{TEMPLATE!invoice.docx!VARS(client=Acme Corp,date=2024/03/15)}}` | Replaces {client} and {date} in the template |
-| `{{TEMPLATE!LIBRARY!template_name!version}}` | Reference template from library | `{{TEMPLATE!LIBRARY!standard_contract!v2.1}}` | Uses version 2.1 of the standard contract |
+| `{{TEMPLATE!filename.docx}}` | Get full document content | `{{TEMPLATE!contract_template.docx}}` | Returns the full contract template |
+| `{{TEMPLATE!filename.docx!section=name}}` | Get section content from document | `{{TEMPLATE!report.docx!section=conclusion}}` | Returns only the conclusion section content |
+| `{{TEMPLATE!filename.docx!section=start:end}}` | Get range of sections from document | `{{TEMPLATE!report.docx!section=intro:methodology}}` | Returns content from intro through methodology sections |
 
 ## JSON Data Keywords (`{{JSON!...}}`)
 
