@@ -31,7 +31,7 @@ def preprocess_word_doc(doc_path):
     keywords = {
         "excel": {"CELL": [], "LAST": [], "RANGE": [], "COLUMN": [], "OTHER": []},
         "input": {"text": [], "area": [], "date": [], "select": [], "check": []},
-        "template": [],
+        "template": {"full": [], "section": [], "range": []},
         "json": [],
         "other": []
     }
@@ -73,7 +73,46 @@ def preprocess_word_doc(doc_path):
                  keywords["input"]["text"].append(content) # {{INPUT}} defaults to text
 
         elif keyword_type == "TEMPLATE":
-            keywords["template"].append(content)
+            # Extract sections/ranges correctly
+            if len(parts) <= 1:
+                # No parameters, just the keyword type - should never happen for TEMPLATE but handle it
+                logger.info(f"Categorizing bare TEMPLATE keyword without parameters")
+                keywords["template"]["full"].append(content)
+                return
+                
+            # Split the content after the TEMPLATE! prefix to analyze the parts
+            template_parts = parts[1].split("!")
+            template_path = template_parts[0]
+            
+            logger.info(f"Processing TEMPLATE keyword: '{content}' with path '{template_path}'")
+            
+            # If there's no second part with section=, it's a full template
+            if len(template_parts) == 1:
+                logger.info(f"Categorizing as FULL template: {content}")
+                keywords["template"]["full"].append(content)
+            # Check for section parameter
+            elif len(template_parts) > 1 and "section=" in template_parts[1]:
+                # Need to extract the section value to check for colon
+                try:
+                    section_param = template_parts[1].split("section=")[1].split("&")[0] if "section=" in template_parts[1] else ""
+                    logger.info(f"Found section parameter: '{section_param}'")
+                    
+                    # Check if it's a range (contains ':') - {{TEMPLATE!filename.docx!section=Start:End}}
+                    if ":" in section_param:
+                        logger.info(f"Categorizing as RANGE template: {content}")
+                        keywords["template"]["range"].append(content)
+                    else:
+                        # Just a single section - {{TEMPLATE!filename.docx!section=SectionName}}
+                        logger.info(f"Categorizing as SECTION template: {content}")
+                        keywords["template"]["section"].append(content)
+                except Exception as e:
+                    logger.error(f"Error parsing section parameter: {e}")
+                    # Default to full if we can't parse the section
+                    keywords["template"]["full"].append(content)
+            else:
+                # Any other template format defaults to full template
+                logger.info(f"Categorizing as FULL template (default): {content}")
+                keywords["template"]["full"].append(content)
         elif keyword_type == "JSON":
             keywords["json"].append(content)
         else:
@@ -105,12 +144,21 @@ def preprocess_word_doc(doc_path):
         "total_keywords": total_keywords,
         "excel_counts": {k: len(v) for k, v in keywords["excel"].items()},
         "input_counts": {k: len(v) for k, v in keywords["input"].items()},
-        "template_count": len(keywords["template"]),
+        "template_count": {k: len(v) for k, v in keywords["template"].items()},
+        "template_total": sum(len(v) for v in keywords["template"].values()),
         "json_count": len(keywords["json"]),
         "other_count": len(keywords["other"]),
         "needs_excel": needs_excel,
         "keywords": keywords
     }
+    
+    # Debug log for template counts
+    logger.info(f"Template summary: {summary['template_count']}")
+    logger.info(f"Template total: {summary['template_total']}")
+    for t_type, items in keywords["template"].items():
+        if items:
+            logger.info(f"Template {t_type} items: {items}")
+    
     return summary
 
 
@@ -424,39 +472,11 @@ def display_keyword_summary(summary):
         with col2:
             # Enhanced Template section with more details
             st.markdown("**Template Keywords (`TEMPLATE!`)**")
-            st.write(f"Total: {summary['template_count']}")
-            if summary['template_count'] > 0 and 'keywords' in summary and summary['keywords']['template']:
-                # Analyze template types - classify by whole doc vs section
-                template_types = {"section": [], "whole_doc": [], "other": []}
-                for item in summary['keywords']['template']:
-                    parts = item.split("!")
-                    if len(parts) > 1 and parts[1].startswith("section="):
-                        template_types["section"].append(item)
-                    elif len(parts) == 1:
-                        template_types["whole_doc"].append(item)
-                    else:
-                        template_types["other"].append(item)
-                
-                # Show section-based templates
-                if template_types["section"]:
-                    st.write("**Section-based templates:**")
-                    for item in template_types["section"][:3]:  # Show first 3
-                        parts = item.split("!")
-                        filename = parts[0]
-                        section_name = parts[1].split("section=")[1].split(",")[0].strip()
-                        st.caption(f"- Extract section *'{section_name}'* from `{filename}`")
-                
-                # Show whole document templates
-                if template_types["whole_doc"]:
-                    st.write("**Whole document templates:**")
-                    for item in template_types["whole_doc"][:3]:  # Show first 3
-                        st.caption(f"- Include entire document `{item}`")
-                
-                # Show other template types
-                if template_types["other"]:
-                    st.write("**Other template operations:**")
-                    for item in template_types["other"][:3]:  # Show first 3
-                        st.caption(f"- `{{{{{item}}}}}`")
+            st.write(f"Total: {summary['template_total']}")
+            for template_type, count in summary["template_count"].items():
+                if count > 0: 
+                    # Just show the uppercase name and count
+                    st.write(f"- {template_type.upper()}: {count}")
             
             st.markdown("**JSON Keywords (`JSON!`)**")
             st.write(f"Total: {summary['json_count']}")
