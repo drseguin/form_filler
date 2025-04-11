@@ -231,12 +231,17 @@ if st.session_state.excel_manager is not None:
         st.subheader("Keyword Parser")
         
         # Show help information
-        with st.expander("Keyword Help"):
-            if st.session_state.keyword_parser:
+        if st.session_state.keyword_parser:
+            with st.expander("Excel Keyword Reference Guide", expanded=False):
                 st.markdown(st.session_state.keyword_parser.get_excel_keyword_help())
+            with st.expander("Input Keyword Reference Guide", expanded=False):
                 st.markdown(st.session_state.keyword_parser.get_input_keyword_help())
+            with st.expander("Template Keyword Reference Guide", expanded=False):
                 st.markdown(st.session_state.keyword_parser.get_template_keyword_help())
+            with st.expander("JSON Keyword Reference Guide", expanded=False):
                 st.markdown(st.session_state.keyword_parser.get_json_keyword_help())
+            with st.expander("AI Keyword Reference Guide", expanded=False):
+                st.markdown(st.session_state.keyword_parser.get_ai_keyword_help())
         
         # Input for keyword string
         st.subheader("Parse Keywords")

@@ -1383,6 +1383,19 @@ Transform the boolean values in the JSON path `key` to custom text. Example: {{J
 """
         return help_text 
 
+    def get_ai_keyword_help(self):
+        """
+        Get help text explaining how to use AI Keywords with '!' separator.
+
+        Returns:
+            A string with help information about available keywords.
+        """
+        help_text = """
+# AI Keywords
+If AI keywords `{{AI!...}}` are detected in the uploaded document, the application will look for the specified AI file(s) `(ex: ai_document.json)` in the `ai` folder. The system will first look for the file at the specified path, and if not found, it will check in the 'ai' directory.
+*** COMMING SOON ***
+"""
+        return help_text 
 
     def _normalize_text(self, text):
         """Normalize text for section name comparison to handle apostrophe variations and special characters."""
