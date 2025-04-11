@@ -54,53 +54,62 @@ The `keywordParser` class processes templating keywords (enclosed in `{{}}`) wit
 
 Keywords to fetch data from an Excel file.
 
-| Keyword Pattern                                       | Description                                                                                     | Example                                                       |
-| :---------------------------------------------------- | :---------------------------------------------------------------------------------------------- | :------------------------------------------------------------ |
-| `{{XL!CELL!cell_ref}}`                                | Get value from a single cell (e.g., `A1`).                                                      | `{{XL!CELL!A1}}` → `$127,350.00`                              |
-| `{{XL!CELL!SheetName!cell_ref}}`                      | Get value from a cell on a specific sheet.                                                      | `{{XL!CELL!Sales!C10}}` → `42%`                               |
-| `{{XL!LAST!cell_ref}}`                                | Get the last non-empty value going down from `cell_ref`.                                        | `{{XL!LAST!F5}}` → `Total: $45,982.75`                        |
-| `{{XL!LAST!SheetName!cell_ref}}`                      | Get the last non-empty value from a specific sheet.                                             | `{{XL!LAST!Summary!B2}}` → `Grand Total: 239 units`           |
-| `{{XL!LAST!sheet_name!cell_ref!Title}}`               | Find column by `Title` in `cell_ref`'s row, get last value below.                               | `{{XL!LAST!Items!A4!Total Costs}}` → `$12,540.00`             |
-| `{{XL!RANGE!range_ref}}`                              | Get values from a range (e.g., `A1:C5` or `NamedRange`). Returns formatted table.               | `{{XL!RANGE!A5:D10}}` → *[inserts formatted table]*           |
-| `{{XL!RANGE!SheetName!range_ref}}`                    | Get values from a range on a specific sheet.                                                    | `{{XL!RANGE!Expenses!B2:G10}}` → *[inserts formatted table]*  |
-| `{{XL!COLUMN!sheet_name!col_refs}}`                   | Get specified columns by cell reference (e.g., "A1,C1,E1"). Returns table.                      | `{{XL!COLUMN!Items!A4,E4,F4}}` → *[inserts table with selected columns]* |
-| `{{XL!COLUMN!sheet_name!"Titles"!start_row}}`         | Get columns by `Titles` (e.g., "Revenue,Profit") found in `start_row`. Returns table.           | `{{XL!COLUMN!Data!"Category,Value"!1}}` → *[inserts table with matching columns]* |
+If Excel keywords `{{XL!...}}` are detected in the uploaded document, the user will be prompt to upload an Excel file in Step 2.
+
+| Keyword Pattern | Description | Example |
+| :-------------- | :---------- | :------ |
+| `{{XL!CELL!cell_ref}}` | Get a value from `cell_ref` (ex: A1). | `{{XL!CELL!A1}}` → `$127,350.00` |
+| `{{XL!CELL!Sheet!cell_ref}}` | Get a value from `cell_ref` (ex: A1) in `Sheet`. | `{{XL!CELL!Sales!C10}}` → `42%` |
+| `{{XL!LAST!cell_ref}}` | Get the last non-empty value going down from `cell_ref` (ex: A1). Used for getting totals. | `{{XL!LAST!F5}}` → `Total: $45,982.75` |
+| `{{XL!LAST!Sheet!cell_ref}}` | Get the last non-empty value going down from `cell_ref` (ex: A1) in `Sheet`. Used for getting totals. | `{{XL!LAST!Summary!B2}}` → `Grand Total: 239 units` |
+| `{{XL!LAST!Sheet!cell_ref!Title}}` | From `cell_ref` (ex: A1), on `Sheet` scan right until the `Title` is detected, then get the last non-empty value going down from the `Title` column. Used for getting totals. | `{{XL!LAST!Items!A4!Total Costs}}` → `$12,540.00` |
+| `{{XL!RANGE!Start Cell:End Cell}}` | Get values for the range starting at `Start Cell` (ex: A1) to the `End Cell` (ex: G13). A formatted table is returned. | `{{XL!RANGE!A5:D10}}` → *[inserts formatted table]* |
+| `{{XL!RANGE!Sheet!Start Cell:End Cell}}` | Get values for the range starting at `Start Cell` (ex: A1) to the `End Cell` (ex: G13) in `Sheet`. A formatted table is returned. | `{{XL!RANGE!Expenses!B2:G10}}` → *[inserts formatted table]* |
+| `{{XL!COLUMN!Sheet!Cell 1,Cell 2,Cell 3,...}}` | Returns a formatted table with columns `Cell 1` (ex: A1),`Cell 2` (ex: C1),`Cell 3` (ex: F1)... from `Sheet` appended together. Row number must be the same for each. Example: {{XL!COLUMN!Support!C4,E4,J4}}. | `{{XL!COLUMN!Items!A4,E4,F4}}` → *[inserts table with selected columns]* |
+| `{{XL!COLUMN!Sheet!Title 1,Title 2,Title 3,...!Row}}` | Returns a formatted table with columns with `Title 1` (ex: Item),`Title 2` (ex: HST),`Title 3` (ex: Total)... from `Sheet` appended together. The `Title` row is specified by `Row` (ex: 6). Example: {{XL!COLUMN!Distribution Plan!Unit,DHTC,Total!4}}. | `{{XL!COLUMN!Data!"Category,Value"!1}}` → *[inserts table with matching columns]* |
 
 ##### User Input Keywords (`{{INPUT!...}}`)
 
 Keywords to create interactive input fields in Streamlit applications.
 
-| Keyword Pattern                         | Description                                                   | Example                                                |
-| :-------------------------------------- | :------------------------------------------------------------ | :----------------------------------------------------- |
-| `{{INPUT!text!label!default_value}}`    | Single-line text input.                                       | `{{INPUT!text!Your Name!John Doe}}`                    |
-| `{{INPUT!area!label!default_value!height}}` | Multi-line text area (optional height).                       | `{{INPUT!area!Comments!!200}}`                         |
-| `{{INPUT!date!label!default_date!format}}` | Date picker ('today' or 'YYYY/MM/DD', optional format).       | `{{INPUT!date!Select Date!today!YYYY/MM/DD}}`          |
-| `{{INPUT!select!label!opt1,opt2,...}}`  | Dropdown selection.                                           | `{{INPUT!select!Choose Color!Red,Green,Blue}}`         |
-| `{{INPUT!check!label!default_state}}`   | Checkbox ('True' or 'False').                                 | `{{INPUT!check!Agree to Terms!false}}`                 |
+If User Input keywords `{{INPUT!...}}` are detected in the uploaded document, the user will be prompt for input value(s) in Step 3.
+
+| Keyword Pattern | Description | Example |
+| :-------------- | :---------- | :------ |
+| `{{INPUT!TEXT!label!default_value}}` | Prompt the user for a single-line text input with `label` and `default_value`. | `{{INPUT!text!Your Name!John Doe}}` |
+| `{{INPUT!AREA!label!default_value!height}}` | Prompt the user for a multi-line text input with `label`, `default_value`, and `height (ex: 200)`. | `{{INPUT!area!Comments!!200}}` |
+| `{{INPUT!DATE!label!default_date!format}}` | Prompt the user for a date input with `label`, `default_date` (ex: 1990/01/01), and `format` (ex: YYYY/MM/DD). | `{{INPUT!date!Select Date!today!YYYY/MM/DD}}` |
+| `{{INPUT!SELECT!label!option1,option2,option3,...}}` | Prompt the user for a dropdown selection with `label` and options `option1`, `option2`, `option3`, etc. | `{{INPUT!select!Choose Color!Red,Green,Blue}}` |
+| `{{INPUT!CHECK!label!default_state}}` | Prompt the user for a checkbox input with `label` and `default_state` (ex: True). | `{{INPUT!check!Agree to Terms!false}}` |
 
 ##### Template Keywords (`{{TEMPLATE!...}}`)
 
 Keywords to include content from other files or libraries.
 
-| Keyword Pattern                                    | Description                                                               | Example                                                     |
-| :------------------------------------------------- | :------------------------------------------------------------------------ | :---------------------------------------------------------- |
-| `{{TEMPLATE!filename.docx}}`                       | Include entire external template file.                                    | `{{TEMPLATE!disclaimer.txt}}`                               |
-| `{{TEMPLATE!filename.docx!section=name}}`          | Include specific section/bookmark (implementation specific).              | `{{TEMPLATE!report.docx!section=conclusion}}`               |
-| `{{TEMPLATE!filename.txt!line=5}}`                 | Include specific line number from text file.                              | `{{TEMPLATE!data.txt!line=10}}`                             |
-| `{{TEMPLATE!filename.docx!paragraph=3}}`           | Include specific paragraph number (based on "\n\n" separation).           | `{{TEMPLATE!letter.txt!paragraph=2}}`                       |
-| `{{TEMPLATE!filename.docx!VARS(key=val,...}})`     | Template with variable substitution (values can be keywords).             | `{{TEMPLATE!invite.txt!VARS(name=Jane,event=Party)}}`       |
-| `{{TEMPLATE!LIBRARY!template_name!version}}`       | Reference template from a predefined library (optional version).          | `{{TEMPLATE!LIBRARY!confidentiality_clause}}`               |
+If Template keywords `{{TEMPLATE!...}}` are detected in the uploaded document, the application will look for the specified template file(s) `(ex: filename.docx)` in the `templates` folder.
+
+| Keyword Pattern | Description | Example |
+| :-------------- | :---------- | :------ |
+| `{{TEMPLATE!filename.docx}}` | Inject the full document content. | `{{TEMPLATE!disclaimer.txt}}` |
+| `{{TEMPLATE!filename.docx!section=heading}}` | Inject the content of the section named `heading` including the section heading. | `{{TEMPLATE!report.docx!section=conclusion}}` |
+| `{{TEMPLATE!filename.docx!section=heading!title=false}}` | Inject the content of the section named `heading` without the section heading if title is set to false. | `{{TEMPLATE!report.docx!section=conclusion!title=false}}` |
+| `{{TEMPLATE!filename.docx!section=heading_start:heading_end}}` | Inject the content of the sections from `heading_start` to `heading_end` including the section heading. | `{{TEMPLATE!report.docx!section=intro:conclusion}}` |
+| `{{TEMPLATE!filename.docx!section=heading_start:heading_end&title=false}}` | Inject the content of the sections from `heading_start` to `heading_end` without the section heading if title is set to false. | `{{TEMPLATE!report.docx!section=intro:conclusion&title=false}}` |
 
 ##### JSON Data Keywords (`{{JSON!...}}`)
 
 Keywords to fetch data from JSON files using JSONPath.
 
-| Keyword Pattern                                    | Description                                                               | Example                                                       |
-| :------------------------------------------------- | :------------------------------------------------------------------------ | :------------------------------------------------------------ |
-| `{{JSON!filename.json!json_path}}`                 | Access data using JSONPath (e.g., `$.key`, `$.array[0].name`).            | `{{JSON!config.json!$.settings.theme}}` → `dark`               |
-| `{{JSON!filename.json!json_path!TRANSFORMATION}}`  | Apply optional transformation: `SUM`, `JOIN(delimiter)`, `BOOL(Yes/No)`.  | `{{JSON!sales.json!$.quarterly!SUM}}` → `347890.50`           |
-|                                                    |                                                                           | `{{JSON!users.json!$.names!JOIN(, )}}` → `John, Mary, Bob`     |
-|                                                    |                                                                           | `{{JSON!settings.json!$.active!BOOL(Enabled/Disabled)}}` → `Enabled` |
+If JSON keywords `{{JSON!...}}` are detected in the uploaded document, the application will look for the specified JSON file(s) `(ex: filename.json)` in the `json` folder. The system will first look for the file at the specified path, and if not found, it will check in the 'json' directory.
+
+| Keyword Pattern | Description | Example |
+| :-------------- | :---------- | :------ |
+| `{{JSON!!filename.json}}` | Inject the full JSON content. Note the double `!!` to indicate the full JSON content. | `{{JSON!!config.json}}` → *[full JSON content]* |
+| `{{JSON!!filename.json!$.}}` | Alternative syntax that also injects the full JSON content (the path `$.` refers to the root). | `{{JSON!!settings.json!$.}}` → *[full JSON content]* |
+| `{{JSON!filename.json!$.key}}` | Inject the content of the JSON path `key`. | `{{JSON!launch.json!$.configurations}}` → *[configurations value]* |
+| `{{JSON!filename.json!$.key!SUM}}` | Sum the numeric values in the JSON path `key`. | `{{JSON!sales.json!$.monthly_totals!SUM}}` → `347890.50` |
+| `{{JSON!filename.json!$.key!JOIN(, )}}` | Join the values in the JSON path `key` with a comma and space. | `{{JSON!users.json!$.names!JOIN(, )}}` → `John, Mary, Bob` |
+| `{{JSON!filename.json!$.key!BOOL(Yes/No)}}` | Transform the boolean values in the JSON path `key` to custom text. | `{{JSON!status.json!$.system_active!BOOL(Online/Offline)}}` → `Online` |
 
 #### Word Document Integration
 
@@ -192,4 +201,4 @@ processed_report = parser.parse(report_template)
 
 ## Developer
 
-**David Seguin** is the creator and lead developer of FORM Filler. 
+**David Seguin** is the creator and lead developer of FORM Filler.
