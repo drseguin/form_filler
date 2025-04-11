@@ -1277,23 +1277,14 @@ Returns a formatted table with columns with `Title 1 (ex: Item)`,`Title 2 (ex: H
 If User Input keywords `{{INPUT!...}}` are detected in the uploaded document, the user will be prompt for input value(s) in Step 3.
 ### {{INPUT!text!label!default_value}}
 Get a value from `Cell` `(ex: A1)`.
-### {{XL!CELL!`Sheet`!`Cell`}}
+### {{INPUT!area!label!default_value!height}}
 Get a value from `Cell` `(ex: A1)` in `Sheet`.
-### {{XL!LAST!`Cell`}}
-Get the last non-empty value going down from `Cell` `(ex: A1)`. Used for getting totals.
-### {{XL!LAST!`Sheet`!`Cell`}}
-Get the last non-empty value going down from `Cell` `(ex: A1)` in `Sheet`. Used for getting totals.
-### {{XL!LAST!`Sheet`!`Cell`!`Title`}}
-From `Cell` `(ex: A1)`, on `Sheet` scan right until the `Title` is detected, then get the last non-empty value going down from the `Title` column. Used for getting totals.
-### {{XL!RANGE!`Start Cell`:`End Cell`}}
-Get values for the range starting at `Start Cell (ex: A1)` to the `End Cell (ex: G13)`. A formated table is returned.
-### {{XL!RANGE!`Sheet`!`Start Cell`:`End Cell`}}
-Get values for the range starting at `Start Cell (ex: A1)` to the `End Cell (ex: G13)` in `Sheet`. A formated table is returned.
-### {{XL!COLUMN!`Sheet`!`Cell 1`,`Cell 2`,`Cell 3`,...}}
-Returns a formatted table with columns `Cell 1 (ex: A1)`,`Cell 2 (ex: C1)`,`Cell 3 (ex: F1)...` from `Sheet` appended together. Row number must be the same for each. Example: `{{XL!COLUMN!Support!C4,E4,J4}}`.
-### {{XL!COLUMN!`Sheet`!`Title 1`,`Title 2`,`Title 3`,...!`Row`}}
-Returns a formatted table with columns with `Title 1 (ex: Item)`,`Title 2 (ex: HST)`,`Title 3 (ex: Total)...` from `Sheet` appended together. The `Title` row is specified by `Row (ex: 6)`. Example: `{{XL!COLUMN!Distribution Plan!Unit,DHTC,Total!4}}`.
-
+### {{INPUT!date!label!default_date!format}}
+Get a value from `Cell` `(ex: A1)` in `Sheet`.
+### {{INPUT!select!label!option1,option2,...}}
+Get a value from `Cell` `(ex: A1)` in `Sheet`.
+### {{INPUT!check!label!default_state}}
+Get a value from `Cell` `(ex: A1)` in `Sheet`.
 
 ## User Input Keywords (`{{INPUT!...}}`)
 
