@@ -522,7 +522,7 @@ def main():
         # Load and display the Form Filler logo
         st.image("assets/images/form_filler_logo.png", width=250)
         
-        st.subheader("Help & Navigation")
+        st.subheader("Navigation")
         
         # Add visual step indicator
         st.markdown("""
@@ -569,9 +569,10 @@ def main():
             if st.button("Next Step →"):
                 st.session_state.current_step += 1
                 st.rerun()
-        
+
+        st.subheader("Keyword Reference Guides")
         # Keyword reference guide in expandable section
-        with st.expander("Excel Keyword Reference Guide", expanded=False):
+        with st.expander("Excel Keyword Reference Guide", expanded=True):
             st.markdown(st.session_state.keyword_parser_instance_for_help.get_excel_keyword_help())
         with st.expander("Input Keyword Reference Guide", expanded=False):
             st.markdown(st.session_state.keyword_parser_instance_for_help.get_excel_keyword_help())

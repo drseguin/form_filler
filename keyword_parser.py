@@ -1243,7 +1243,7 @@ class keywordParser:
         """
         help_text = """
 # Excel Keywords
-
+If Excel keywords `{{XL!...}}` are detected in the uploaded document, the user will be prompt to upload an Excel file in Step 2.
 ### {{XL!CELL!A1}}
 Get a value from a single cell
 ### {{XL!CELL!SheetName!B5}}
