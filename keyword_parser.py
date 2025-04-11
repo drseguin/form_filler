@@ -1372,16 +1372,14 @@ If JSON keywords `{{JSON!...}}` are detected in the uploaded document, the appli
 Inject the full JSON content. Note the double `!!` to indicate the full JSON content.
 ### {{JSON!!`filename.json`!`$.`}}
 Alternative syntax that also injects the full JSON content (the path `$.` refers to the root).
-### {{JSON!`filename.json`!`$.`}}
-Inject the full JSON content.
 ### {{JSON!`filename.json`!`$.key`}}
-Inject the content of the JSON path `path`.
+Inject the content of the JSON path `key`. Example: {{JSON!!launch.json!\$.configurations}}. Example: {{JSON!launch.json!$.configurations[0].name}}.
 ### {{JSON!`filename.json`!`$.key`!`SUM`}}
-Sum the numeric values in the JSON path `path`.
+Sum the numeric values in the JSON path `key`.
 ### {{JSON!`filename.json`!`$.key`!`JOIN(, )`}}
-Join the values in the JSON path `path` with a comma and space.
+Join the values in the JSON path `key` with a comma and space.
 ### {{JSON!`filename.json`!`$.key`!`BOOL(Yes/No)`}}
-Transform the boolean values in the JSON path `path` to custom text.
+Transform the boolean values in the JSON path `key` to custom text.
 
 
 
