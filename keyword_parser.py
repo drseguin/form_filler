@@ -1236,7 +1236,7 @@ class keywordParser:
 
     def get_excel_keyword_help(self):
         """
-        Get help text explaining how to use excel keywords with '!' separator.
+        Get help text explaining how to use Excel Keywords with '!' separator.
 
         Returns:
             A string with help information about available keywords.
@@ -1267,7 +1267,7 @@ Returns a formatted table with columns with `Title 1` (ex: Item),`Title 2` (ex: 
 
     def get_input_keyword_help(self):
         """
-        Get help text explaining how to use input keywords with '!' separator.
+        Get help text explaining how to use User Iniput Keywords with '!' separator.
 
         Returns:
             A string with help information about available keywords.
@@ -1290,36 +1290,49 @@ Prompt the user for a checkbox input with `label` and `default_state` (ex: True)
 
     def get_template_keyword_help(self):
         """
-        Get help text explaining how to use input keywords with '!' separator.
+        Get help text explaining how to use Template Keywords with '!' separator.
 
         Returns:
             A string with help information about available keywords.
         """
         help_text = """
-# User Input Keywords
-If User Input keywords `{{INPUT!...}}` are detected in the uploaded document, the user will be prompt for input value(s) in Step 3.
-### {{INPUT!TEXT!`label`!`default_value`}}
-Prompt the user for a single-line text input with `label` and `default_value`.
-### {{INPUT!AREA!`label`!`default_value`!`height`}}
-Prompt the user for a multi-line text input with `label`, `default_value`, and `height (ex: 200)`.
-### {{INPUT!DATE!`label`!`default_date`!`format`}}
-Prompt the user for a date input with `label`, `default_date` (ex: 1990/01/01), and `format` (ex: YYYY/MM/DD).
-### {{INPUT!SELECT!`label`!`option1`!`option2`!`option3`!`...`}}
-Prompt the user for a dropdown selection with `label` and options `option1`, `option2`, `option3`, etc.
-### {{INPUT!CHECK!`label`!`default_state`}}
-Prompt the user for a checkbox input with `label` and `default_state` (ex: True).
+# Template Keywords
+If Template keywords `{{TEMPLATE!...}}` are detected in the uploaded document, the application will look for the specified template file(s) `(ex: filename.docx)` in the `templates` folder.
+### {{TEMPLATE!`filename.docx`}}
+Inject the full document content.
+### {{TEMPLATE!`filename.docx`!`section=heading`}}
+Inject the content of the section named `heading` including the section heading.
+### {{TEMPLATE!`filename.docx`!`section=heading`!`title=false`}}
+Inject the content of the section named `heading` without the section heading if title is set to false.
+### {{TEMPLATE!`filename.docx`!`section=heading_start:heading_end`}}
+Inject the content of the sections from `heading_start` to `heading_end` including the section heading.
+### {{TEMPLATE!`filename.docx`!`section=heading_start:heading_end&title=false`}}
+Inject the content of the sections from `heading_start` to `heading_end` without the section heading if title is set to false.
+"""
+        return help_text 
 
-## User Input Keywords (`{{INPUT!...}}`)
+    def get_json_keyword_help(self):
+        """
+        Get help text explaining how to use JSON Keywords with '!' separator.
 
-| Keyword | Description | Example | Result |
-|---------|-------------|---------|--------|
-| `{{INPUT!text!label!default_value}}` | Single-line text input | `{{INPUT!text!Your Name!John Doe}}` | Creates a text input with label "Your Name" and default value "John Doe" |
-| `{{INPUT!area!label!default_value!height}}` | Multi-line text area | `{{INPUT!area!Comments!Enter your comments here!200}}` | Creates a 200px high text area |
-| `{{INPUT!date!label!default_date!format}}` | Date picker | `{{INPUT!date!Birth Date!1990/01/01!YYYY/MM/DD}}` | Creates a date picker with default date |
-| `{{INPUT!select!label!option1,option2,...}}` | Dropdown selection | `{{INPUT!select!Department!Sales,Marketing,IT,HR}}` | Creates a dropdown with these options |
-| `{{INPUT!check!label!default_state}}` | Checkbox | `{{INPUT!check!Agree to Terms!True}}` | Creates a pre-checked checkbox |
+        Returns:
+            A string with help information about available keywords.
+        """
+        help_text = """
+# JSON Keywords
+If JSON keywords `{{JSON!...}}` are detected in the uploaded document, the application will look for the specified JSON file(s) `(ex: filename.json)` in the `json` folder.
+### {{JSON!`filename.json`}}
+Inject the full JSON content.
+### {{JSON!`filename.json`!`path=$.key`}}
+Inject the content of the JSON path `path`.
+### {{JSON!`filename.json`!`path=$.key`!`transform=SUM`}}
+Sum the numeric values in the JSON path `path`.
+### {{JSON!`filename.json`!`path=$.key`!`transform=JOIN(, )`}}
+Join the values in the JSON path `path` with a comma and space.
+### {{JSON!`filename.json`!`path=$.key`!`transform=BOOL(Yes/No)`}}
+Transform the boolean values in the JSON path `path` to custom text.
 
-## Template Keywords (`{{TEMPLATE!...}}`)
+
 
 | Keyword | Description | Example | Result |
 |---------|-------------|---------|--------|

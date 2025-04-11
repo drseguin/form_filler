@@ -576,10 +576,10 @@ def main():
             st.markdown(st.session_state.keyword_parser_instance_for_help.get_excel_keyword_help())
         with st.expander("Input Keyword Reference Guide", expanded=False):
             st.markdown(st.session_state.keyword_parser_instance_for_help.get_input_keyword_help())
-        with st.expander("Template Keyword Reference Guide", expanded=True):
+        with st.expander("Template Keyword Reference Guide", expanded=False):
             st.markdown(st.session_state.keyword_parser_instance_for_help.get_template_keyword_help())
-        with st.expander("JSON Keyword Reference Guide", expanded=False):
-            st.markdown(st.session_state.keyword_parser_instance_for_help.get_excel_keyword_help())
+        with st.expander("JSON Keyword Reference Guide", expanded=True):
+            st.markdown(st.session_state.keyword_parser_instance_for_help.get_json_keyword_help())
         with st.expander("AI Keyword Reference Guide", expanded=False):
             st.markdown(st.session_state.keyword_parser_instance_for_help.get_excel_keyword_help())
 
