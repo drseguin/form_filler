@@ -1124,6 +1124,10 @@ class keywordParser:
             # If no JSON path is specified, use root ($) as default to return the entire file
             if not json_path:
                 json_path = "$"
+                
+            # Handle special case where path is $. (root with empty element)
+            if json_path == "$." or json_path == "$.":
+                json_path = "$"
 
             # Check if filename is from another reference
             if filename.startswith("{{") and filename.endswith("}}"):
@@ -1162,8 +1166,16 @@ class keywordParser:
             if json_path.startswith("$."):
                 path_parts = json_path[2:].split(".")
                 current = json_data
+                
+                # Handle the case where the path is $.
+                if not path_parts[0] and len(path_parts) == 1:
+                    return json.dumps(json_data, indent=2)
 
                 for part in path_parts:
+                    # Skip empty parts (handles cases like $.property..property2)
+                    if not part:
+                        continue
+                        
                     # Handle array indexing like array[0] or [*]
                     if "[" in part and part.endswith("]"):
                         key = part.split("[")[0]
@@ -1356,10 +1368,12 @@ Inject the content of the sections from `heading_start` to `heading_end` without
         help_text = """
 # JSON Keywords
 If JSON keywords `{{JSON!...}}` are detected in the uploaded document, the application will look for the specified JSON file(s) `(ex: filename.json)` in the `json` folder. The system will first look for the file at the specified path, and if not found, it will check in the 'json' directory.
+### {{JSON!!`filename.json`}}
+Inject the full JSON content. Note the double `!!` to indicate the full JSON content.
+### {{JSON!!`filename.json`!`$.`}}
+Alternative syntax that also injects the full JSON content (the path `$.` refers to the root).
 ### {{JSON!`filename.json`!`$.`}}
 Inject the full JSON content.
-### {{JSON!!`filename.json`}}
-Alternative syntax to inject the full JSON content.
 ### {{JSON!`filename.json`!`$.key`}}
 Inject the content of the JSON path `path`.
 ### {{JSON!`filename.json`!`$.key`!`SUM`}}
@@ -1384,6 +1398,7 @@ Transform the boolean values in the JSON path `path` to custom text.
 | Keyword | Description | Example | Result |
 |---------|-------------|---------|--------|
 | `{{JSON!!filename.json}}` | Get the entire JSON file | `{{JSON!!launch.json}}` | Returns the complete JSON contents |
+| `{{JSON!!filename.json!$.}}` | Get the entire JSON file (alternative) | `{{JSON!!launch.json!$.}}` | Returns the complete JSON contents |
 | `{{JSON!filename.json!$.key}}` | Access simple JSON path | `{{JSON!config.json!$.settings.theme}}` | Returns the theme value from settings |
 | `{{JSON!data.json!$.array[0].name}}` | Access nested JSON data | `{{JSON!data.json!$.users[1].email}}` | Returns the email of the second user |
 | `{{JSON!data.json!$.values!SUM}}` | Sum numeric values in array | `{{JSON!sales.json!$.monthly_totals!SUM}}` | Sums all monthly totals |
@@ -1393,6 +1408,7 @@ Transform the boolean values in the JSON path `path` to custom text.
 ## Notes
 - All keywords use `!` as a separator between parameters
 - For accessing entire JSON files, you can use `{{JSON!!filename.json}}` (with empty first parameter)
+- Paths like `$.` and `$` both refer to the root of the JSON document
 - Keywords can be nested (e.g., inside template variables)
 - File paths can be relative or absolute
 - JSON paths must start with `$.`
