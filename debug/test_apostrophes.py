@@ -2,6 +2,10 @@
 import sys
 import os
 import logging
+
+# Add parent directory to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from keyword_parser import keywordParser
 
 # Set up logging
