@@ -503,18 +503,17 @@ def main():
     # Create a container for the logo (top left) and app intro
     header_container = st.container()
     with header_container:
-            # Load and display the Form Filler logo
-            st.image("assets/images/form_filler_logo.png", width=200)
+        # Load and display the Form Filler logo
+        st.image("assets/images/form_filler_logo.png", width=200)
     
     # Initialize parser instance for help text display
     if 'keyword_parser_instance_for_help' not in st.session_state:
-         st.session_state.keyword_parser_instance_for_help = keywordParser()
-    with st.expander("Keyword Reference Guide"):
-        st.markdown(st.session_state.keyword_parser_instance_for_help.get_keyword_help())
-
+        st.session_state.keyword_parser_instance_for_help = keywordParser()
+    
     # --- State Management ---
     # Initialize state variables if they don't exist
     default_state = {
+        'current_step': 1,  # Track the current wizard step
         'doc_uploaded': False, 'doc_path': None, 'analysis_summary': None,
         'excel_uploaded': False, 'excel_path': None, 'excel_manager_instance': None,
         'keyword_parser_instance': None, 'form_submitted_main': False, 'input_values_main': {},
@@ -523,11 +522,59 @@ def main():
     for key, value in default_state.items():
         if key not in st.session_state:
             st.session_state[key] = value
-
-    # --- Reset Button ---
-    col1, col2 = st.columns([5, 1])
-    with col2:
-        if st.button("Reset"):
+    
+    # Sidebar with keyword reference guide and reset button
+    with st.sidebar:
+        st.subheader("Help & Navigation")
+        
+        # Add visual step indicator
+        st.markdown("""
+        <div class="step-indicator">
+            <div class="step {0}">1</div>
+            <div class="step-line"></div>
+            <div class="step {1}">2</div>
+            <div class="step-line"></div>
+            <div class="step {2}">3</div>
+            <div class="step-line"></div>
+            <div class="step {3}">4</div>
+            <div class="step-line"></div>
+            <div class="step {4}">5</div>
+        </div>
+        """.format(
+            "active" if st.session_state.current_step == 1 else "",
+            "active" if st.session_state.current_step == 2 else "",
+            "active" if st.session_state.current_step == 3 else "",
+            "active" if st.session_state.current_step == 4 else "",
+            "active" if st.session_state.current_step == 5 else ""
+        ), unsafe_allow_html=True)
+        
+        # Step indicator
+        st.write("Current step: ", st.session_state.current_step)
+        
+        # Add Navigation buttons
+        if st.session_state.current_step > 1:
+            if st.button("← Previous Step"):
+                st.session_state.current_step -= 1
+                st.rerun()
+        
+        # Only show Next button if it makes sense for the current step
+        can_proceed = False
+        if st.session_state.current_step == 1 and st.session_state.doc_uploaded:
+            can_proceed = True
+        elif st.session_state.current_step == 2:
+            needs_excel = st.session_state.analysis_summary and st.session_state.analysis_summary["needs_excel"]
+            can_proceed = (not needs_excel) or st.session_state.excel_uploaded
+        elif st.session_state.current_step == 3:
+            has_inputs = st.session_state.analysis_summary and sum(st.session_state.analysis_summary['input_counts'].values()) > 0
+            can_proceed = (not has_inputs) or st.session_state.form_submitted_main
+        
+        if can_proceed and st.session_state.current_step < 5:
+            if st.button("Next Step →"):
+                st.session_state.current_step += 1
+                st.rerun()
+        
+        # Reset button
+        if st.button("Reset Application"):
             logger.info("Resetting application state")
             # Clean up temp files
             if st.session_state.doc_path and os.path.exists(st.session_state.doc_path): 
@@ -545,151 +592,205 @@ def main():
             for key in default_state:
                 st.session_state[key] = default_state[key]
             st.rerun()
-
+        
+        # Keyword reference guide in expandable section
+        with st.expander("Keyword Reference Guide"):
+            st.markdown(st.session_state.keyword_parser_instance_for_help.get_keyword_help())
+    
+    # Main content area - only show the current step
     # --- Step 1: Upload Word Document ---
-    st.subheader("Step 1: Upload Document")
-    doc_file = st.file_uploader("Upload Word Document (.docx)", type=["docx"], key="main_doc_uploader")
+    if st.session_state.current_step == 1:
+        st.header("Step 1: Upload Document")
+        st.write("Upload a Word document containing keywords that you want to process. The document should include keywords in double curly braces like `{{keyword}}`.")
+        
+        doc_file = st.file_uploader("Upload Word Document (.docx)", type=["docx"], key="main_doc_uploader")
 
-    if doc_file and not st.session_state.doc_uploaded:
-         # Reset relevant states for new upload
-        st.session_state.update({k: v for k, v in default_state.items() if k not in ['keyword_parser_instance_for_help']}) # Keep help parser
-        # Save new doc
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_doc:
-            tmp_doc.write(doc_file.getvalue())
-            st.session_state.doc_path = tmp_doc.name
-        st.session_state.doc_uploaded = True
-        st.rerun()
+        # Show example of keywords if no document is uploaded yet
+        if not st.session_state.doc_uploaded and not doc_file:
+            with st.expander("What keywords can I use in my document?"):
+                st.write("Your document can contain various types of keywords surrounded by double curly braces `{{ }}`. For example:")
+                st.code("{{XL!CELL!A1}} - Gets a value from Excel cell A1")
+                st.code("{{INPUT!text!Name}} - Creates an input field for 'Name'")
+                st.code("{{TEMPLATE!contract.docx}} - Inserts content from another document")
+                st.write("See the Keyword Reference Guide in the sidebar for more examples.")
 
-    # --- Step 2: Analysis & Conditional Excel Upload ---
-    if st.session_state.doc_uploaded:
-        st.subheader("Step 2: Analysis & File Uploads")
+        if doc_file and not st.session_state.doc_uploaded:
+            # Reset relevant states for new upload
+            st.session_state.update({k: v for k, v in default_state.items() 
+                                   if k not in ['keyword_parser_instance_for_help', 'current_step']})
+            st.session_state.current_step = 1  # Stay on step 1
+            
+            # Save new doc
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_doc:
+                tmp_doc.write(doc_file.getvalue())
+                st.session_state.doc_path = tmp_doc.name
+            st.session_state.doc_uploaded = True
+            st.rerun()
+        
+        if st.session_state.doc_uploaded:
+            st.success(f"Document uploaded successfully!")
+            st.info("Click 'Next Step →' in the sidebar to continue.")
+    
+    # --- Step 2: Analysis & Excel Upload (if needed) ---
+    elif st.session_state.current_step == 2:
+        st.header("Step 2: Document Analysis & Required Files")
+        st.write("This step analyzes your document to identify keywords and determines if additional files (like Excel) are needed.")
+        
+        # First run analysis if needed
         if not st.session_state.analysis_summary:
-            st.info("Analyzing document...")
-            try:
-                summary = preprocess_word_doc(st.session_state.doc_path)
-                st.session_state.analysis_summary = summary
-                st.rerun()
-            except Exception as e:
-                st.error(f"Analysis failed: {e}")
-                st.session_state.doc_uploaded = False # Allow re-upload
-
+            with st.spinner("Analyzing document..."):
+                try:
+                    summary = preprocess_word_doc(st.session_state.doc_path)
+                    st.session_state.analysis_summary = summary
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Analysis failed: {e}")
+                    st.session_state.doc_uploaded = False  # Allow re-upload
+                    st.session_state.current_step = 1  # Go back to step 1
+                    st.rerun()
+        
+        # Display analysis results
         if st.session_state.analysis_summary:
             display_keyword_summary(st.session_state.analysis_summary)
             needs_excel = st.session_state.analysis_summary["needs_excel"]
-
+            
             # Only show Excel uploader if needed based on analysis
             if needs_excel:
-                excel_file = st.file_uploader("Upload Required Excel Spreadsheet (.xlsx)", type=["xlsx"], key="main_excel_uploader")
+                st.write("Based on the analysis, an Excel file is required.")
+                excel_file = st.file_uploader("Upload Required Excel Spreadsheet (.xlsx)", 
+                                            type=["xlsx"], key="main_excel_uploader")
+                
                 if excel_file and not st.session_state.excel_uploaded:
                     # Save new excel file
-                    if st.session_state.excel_path and os.path.exists(st.session_state.excel_path): os.unlink(st.session_state.excel_path) # Clean old temp excel
+                    if st.session_state.excel_path and os.path.exists(st.session_state.excel_path): 
+                        os.unlink(st.session_state.excel_path)  # Clean old temp excel
+                    
                     with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_excel:
                         tmp_excel.write(excel_file.getvalue())
                         st.session_state.excel_path = tmp_excel.name
+                    
                     st.session_state.excel_uploaded = True
+                    
                     # Reset excel manager instance as file changed
-                    if st.session_state.excel_manager_instance: st.session_state.excel_manager_instance.close()
+                    if st.session_state.excel_manager_instance: 
+                        st.session_state.excel_manager_instance.close()
                     st.session_state.excel_manager_instance = None
                     st.rerun()
-                elif not excel_file and not st.session_state.excel_uploaded:
-                     st.warning("Excel file is required based on document analysis.")
-                     # Stop execution if Excel is needed but not uploaded
-                     st.stop()
-
-
-            # --- Initialize Managers (only once per valid file state) ---
+                
+                if st.session_state.excel_uploaded:
+                    st.success("Excel file uploaded successfully!")
+                else:
+                    st.warning("Excel file is required to proceed.")
+                    # Don't show "Next" button until Excel is uploaded
+            else:
+                st.success("No Excel file required. You can proceed to the next step.")
+            
+            # Initialize Managers
             if needs_excel and st.session_state.excel_path and not st.session_state.excel_manager_instance:
-                 try:
-                      st.session_state.excel_manager_instance = excelManager(st.session_state.excel_path)
-                 except Exception as e:
-                      st.error(f"Failed to load Excel file: {e}")
-                      st.session_state.excel_uploaded = False # Reset upload status
-                      st.stop()
-
+                try:
+                    with st.spinner("Loading Excel data..."):
+                        st.session_state.excel_manager_instance = excelManager(st.session_state.excel_path)
+                        st.success("Excel data loaded successfully!")
+                except Exception as e:
+                    st.error(f"Failed to load Excel file: {e}")
+                    st.session_state.excel_uploaded = False  # Reset upload status
+                    st.rerun()
+            
             # Always ensure parser instance exists, update if excel manager changes
             current_excel_manager = st.session_state.excel_manager_instance if needs_excel else None
             if not st.session_state.keyword_parser_instance or st.session_state.keyword_parser_instance.excel_manager != current_excel_manager:
-                 st.session_state.keyword_parser_instance = keywordParser(current_excel_manager)
-
-            # --- Step 3: User Input Form (if needed) ---
-            # Only display Step 3 if Excel requirements have been met
-            is_excel_ready = not needs_excel or st.session_state.excel_uploaded
+                st.session_state.keyword_parser_instance = keywordParser(current_excel_manager)
+    
+    # --- Step 3: User Input Form (if needed) ---
+    elif st.session_state.current_step == 3:
+        st.header("Step 3: Provide Input Values")
+        st.write("Fill in values for the input fields found in your document. These values will replace the corresponding keywords during processing.")
+        
+        # Check if inputs are needed
+        has_inputs = st.session_state.analysis_summary and sum(st.session_state.analysis_summary['input_counts'].values()) > 0
+        
+        if not has_inputs:
+            st.success("No user inputs required.")
+            st.info("Click 'Next Step →' in the sidebar to continue to processing.")
+        else:
+            st.write("Please provide values for the keywords found in your document.")
             
-            if is_excel_ready:
+            if not st.session_state.form_submitted_main:
                 parser = st.session_state.keyword_parser_instance
-                # Check for input keywords using the analysis summary
-                has_inputs = sum(st.session_state.analysis_summary['input_counts'].values()) > 0
-
-                if has_inputs:
-                    st.subheader("Step 3: Provide User Inputs")
-                    if not st.session_state.form_submitted_main:
-                        with st.form(key="main_input_form"):
-                            # Use analysis summary to find all input keywords
-                            all_input_keywords = [item for sublist in st.session_state.analysis_summary['keywords']['input'].values() for item in sublist]
-                            unique_input_contents = sorted(list(set(all_input_keywords))) # Get unique input definitions
-                            
-                            # Store fields in local state for this form
-                            temp_inputs = {}
-                            
-                            # Disable the parser's internal form handling to prevent duplication
-                            parser.form_submitted = True
-                            
-                            for content in unique_input_contents:
-                                # Create field using parser's helper function
-                                field_key = f"input_field_{content}"
-                                temp_inputs[content] = parser._create_input_field(content)
-
-                            submitted = st.form_submit_button("Submit Inputs")
-                            if submitted:
-                                # Store values in session state
-                                for content in unique_input_contents:
-                                    field_key = f"input_field_{content}"
-                                    # Extract field values from session state
-                                    if field_key in st.session_state:
-                                        field_value = st.session_state[field_key]
-                                        # Ensure we're storing the content exactly as it appears in the document
-                                        st.session_state.input_values_main[content] = field_value
-                                
-                                # Update the parser's internal values - ensure we use the full keyword format 
-                                for content, value in st.session_state.input_values_main.items():
-                                    # Store using the full format with INPUT!
-                                    keyword = f"{{{{{content}}}}}"
-                                    parser.input_values[keyword] = value
-                                    
-                                    # Also store in alternate formats to maximize chances of matching
-                                    if content.startswith("INPUT!"):
-                                        # Also store without the INPUT! prefix
-                                        non_prefix_content = content[6:]  # Remove "INPUT!"
-                                        alt_keyword = f"{{{{{non_prefix_content}}}}}"
-                                        parser.input_values[alt_keyword] = value
-                                    else:
-                                        # Also store with the INPUT! prefix
-                                        alt_keyword = f"{{{{INPUT!{content}}}}}"
-                                        parser.input_values[alt_keyword] = value
-                                
-                                st.session_state.form_submitted_main = True
-                                st.success("Inputs submitted.")
-                                logger.info("Form inputs submitted")
-                                st.rerun()
-                    else:
-                        st.success("Inputs already submitted.")
-
-                # --- Step 4: Process ---
-                # Only proceed to Step 4 if all prerequisites are met
-                st.subheader("Step 4: Process Document")
                 
-                # Determine if ready to process - adjust gate logic to check all requirements
-                ready_to_process = st.session_state.doc_uploaded and \
-                                (not needs_excel or st.session_state.excel_uploaded) and \
-                                (not has_inputs or st.session_state.form_submitted_main)
-
-                process_button_disabled = not ready_to_process or st.session_state.processing_started
-
-                if st.button("Process Document", disabled=process_button_disabled, key="main_process_btn"):
-                    st.session_state.processing_started = True
-                    st.session_state.processed_doc_path = None # Clear previous
-
-                    st.info("Processing document... This may take a moment.")
+                with st.form(key="main_input_form"):
+                    # Use analysis summary to find all input keywords
+                    all_input_keywords = [item for sublist in st.session_state.analysis_summary['keywords']['input'].values() 
+                                         for item in sublist]
+                    unique_input_contents = sorted(list(set(all_input_keywords)))  # Get unique input definitions
+                    
+                    # Store fields in local state for this form
+                    temp_inputs = {}
+                    
+                    # Disable the parser's internal form handling to prevent duplication
+                    parser.form_submitted = True
+                    
+                    for content in unique_input_contents:
+                        # Create field using parser's helper function
+                        field_key = f"input_field_{content}"
+                        temp_inputs[content] = parser._create_input_field(content)
+                    
+                    submitted = st.form_submit_button("Submit Inputs")
+                    if submitted:
+                        # Store values in session state
+                        for content in unique_input_contents:
+                            field_key = f"input_field_{content}"
+                            # Extract field values from session state
+                            if field_key in st.session_state:
+                                field_value = st.session_state[field_key]
+                                # Ensure we're storing the content exactly as it appears in the document
+                                st.session_state.input_values_main[content] = field_value
+                        
+                        # Update the parser's internal values - ensure we use the full keyword format
+                        for content, value in st.session_state.input_values_main.items():
+                            # Store using the full format with INPUT!
+                            keyword = f"{{{{{content}}}}}"
+                            parser.input_values[keyword] = value
+                            
+                            # Also store in alternate formats to maximize chances of matching
+                            if content.startswith("INPUT!"):
+                                # Also store without the INPUT! prefix
+                                non_prefix_content = content[6:]  # Remove "INPUT!"
+                                alt_keyword = f"{{{{{non_prefix_content}}}}}"
+                                parser.input_values[alt_keyword] = value
+                            else:
+                                # Also store with the INPUT! prefix
+                                alt_keyword = f"{{{{INPUT!{content}}}}}"
+                                parser.input_values[alt_keyword] = value
+                        
+                        st.session_state.form_submitted_main = True
+                        logger.info("Form inputs submitted")
+                        st.rerun()
+            else:
+                st.success("Input values submitted successfully!")
+                st.info("Click 'Next Step →' in the sidebar to continue to processing.")
+    
+    # --- Step 4: Process Document ---
+    elif st.session_state.current_step == 4:
+        st.header("Step 4: Process Document")
+        st.write("Now the system will replace all keywords in your document with their corresponding values from Excel, user inputs, and templates.")
+        
+        # Determine if ready to process
+        needs_excel = st.session_state.analysis_summary and st.session_state.analysis_summary["needs_excel"]
+        has_inputs = st.session_state.analysis_summary and sum(st.session_state.analysis_summary['input_counts'].values()) > 0
+        
+        ready_to_process = st.session_state.doc_uploaded and \
+                          (not needs_excel or st.session_state.excel_uploaded) and \
+                          (not has_inputs or st.session_state.form_submitted_main)
+        
+        process_button_disabled = not ready_to_process or st.session_state.processing_started
+        
+        if not process_button_disabled:
+            if st.button("Process Document Now", key="main_process_btn"):
+                st.session_state.processing_started = True
+                st.session_state.processed_doc_path = None  # Clear previous
+                
+                with st.spinner("Processing document... This may take a moment."):
                     try:
                         # Ensure parser has the submitted inputs
                         parser = st.session_state.keyword_parser_instance
@@ -698,12 +799,16 @@ def main():
                         parser.form_submitted = True
                         
                         # Process the document
+                        progress_bar = st.progress(0)
+                        progress_text = st.empty()
+                        progress_text.text("Processing keywords...")
+                        
                         processed_doc, count = process_word_doc(
                             st.session_state.doc_path,
                             st.session_state.excel_path,
                             parser=parser
                         )
-
+                        
                         if processed_doc:
                             tmp_folder = "tmp"
                             if not os.path.exists(tmp_folder): os.makedirs(tmp_folder)
@@ -711,42 +816,77 @@ def main():
                             base_name = os.path.basename(st.session_state.doc_path)
                             output_filename = f"processed_{base_name}" if not base_name.startswith("tmp") else "processed_document.docx"
                             output_path = os.path.join(tmp_folder, output_filename)
-
+                            
                             processed_doc.save(output_path)
                             st.session_state.processed_doc_path = output_path
                             st.session_state.processed_count = count
                             st.success(f"Processing Complete! Approximately {count} keywords processed.")
                             logger.info(f"Document processed successfully. Saved to {output_path}. {count} keywords processed.")
-                            # Rerun needed to show download button correctly after processing finishes
+                            
+                            # Automatically move to the download step
+                            st.session_state.current_step = 5
                             st.rerun()
                         else:
                             st.warning("Processing did not return a document.")
-
+                    
                     except Exception as e:
                         st.error(f"Error during processing: {e}")
+                        logger.error(f"Processing error: {str(e)}", exc_info=True)
                     finally:
                         # Close excel manager instance if it exists
                         if st.session_state.excel_manager_instance:
                             st.session_state.excel_manager_instance.close()
                             st.session_state.excel_manager_instance = None
-                        st.session_state.processing_started = False # Reset processing flag
-
-            # --- Step 5: Download ---
-            if st.session_state.processed_doc_path:
-                st.subheader("Step 5: Download Result")
-                st.success(f"Document processed. Approximately {st.session_state.processed_count} keywords replaced.")
-                
-                try:
-                    with open(st.session_state.processed_doc_path, "rb") as fp:
-                        st.download_button(
-                            label="Download Processed Document",
-                            data=fp,
-                            file_name=os.path.basename(st.session_state.processed_doc_path),
-                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        )
-                except FileNotFoundError:
-                    st.error("Processed file not found. Please try processing again.")
-                    st.session_state.processed_doc_path = None # Reset path
+                        st.session_state.processing_started = False  # Reset processing flag
+        else:
+            if not ready_to_process:
+                st.warning("Please complete the previous steps before processing.")
+            elif st.session_state.processing_started:
+                st.info("Processing is currently in progress...")
+    
+    # --- Step 5: Download ---
+    elif st.session_state.current_step == 5:
+        st.header("Step 5: Download Result")
+        st.write("Your document has been processed successfully! You can now download the final document with all keywords replaced.")
+        
+        if st.session_state.processed_doc_path:
+            st.success(f"Document processed successfully! {st.session_state.processed_count} keywords were replaced.")
+            st.write("Your document is ready to download.")
+            
+            try:
+                with open(st.session_state.processed_doc_path, "rb") as fp:
+                    st.download_button(
+                        label="📥 Download Processed Document",
+                        data=fp,
+                        file_name=os.path.basename(st.session_state.processed_doc_path),
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+                    
+                    st.write("You can also:")
+                    if st.button("Start Over with a New Document"):
+                        # Reset to initial state but keep the help parser
+                        if st.session_state.doc_path and os.path.exists(st.session_state.doc_path): 
+                            os.unlink(st.session_state.doc_path)
+                        if st.session_state.excel_path and os.path.exists(st.session_state.excel_path): 
+                            os.unlink(st.session_state.excel_path)
+                        if st.session_state.processed_doc_path and os.path.exists(st.session_state.processed_doc_path):
+                            os.unlink(st.session_state.processed_doc_path)
+                        # Reset state except keyword_parser_instance_for_help
+                        parser_for_help = st.session_state.keyword_parser_instance_for_help
+                        for key in default_state:
+                            st.session_state[key] = default_state[key]
+                        st.session_state.keyword_parser_instance_for_help = parser_for_help
+                        st.rerun()
+            except FileNotFoundError:
+                st.error("Processed file not found. Please try processing again.")
+                st.session_state.processed_doc_path = None  # Reset path
+                st.session_state.current_step = 4  # Go back to processing step
+                st.rerun()
+        else:
+            st.error("No processed document available. Please go back to the processing step.")
+            if st.button("Return to Processing Step"):
+                st.session_state.current_step = 4
+                st.rerun()
 
 
 if __name__ == "__main__":
