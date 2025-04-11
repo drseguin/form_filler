@@ -1236,7 +1236,7 @@ class keywordParser:
 
     def get_excel_keyword_help(self):
         """
-        Get help text explaining how to use keywords with '!' separator.
+        Get help text explaining how to use excel keywords with '!' separator.
 
         Returns:
             A string with help information about available keywords.
@@ -1244,33 +1244,56 @@ class keywordParser:
         help_text = """
 # Excel Keywords
 If Excel keywords `{{XL!...}}` are detected in the uploaded document, the user will be prompt to upload an Excel file in Step 2.
-### {{XL!CELL!A1}}
-Get a value from a single cell
-### {{XL!CELL!SheetName!B5}}
-Get a value from a cell in a specific sheet
-### {{XL!LAST!A1}}
-Get the last non-empty value going down from A1. Used for getting totals.
-### {{XL!LAST!Sheet!Cell!Title}}
+### {{XL!CELL!`Cell`}}
+Get a value from `Cell` `(ex: A1)`.
+### {{XL!CELL!`Sheet`!`Cell`}}
+Get a value from `Cell` `(ex: A1)` in `Sheet`.
+### {{XL!LAST!`Cell`}}
+Get the last non-empty value going down from `Cell` `(ex: A1)`. Used for getting totals.
+### {{XL!LAST!`Sheet`!`Cell`}}
+Get the last non-empty value going down from `Cell` `(ex: A1)` in `Sheet`. Used for getting totals.
+### {{XL!LAST!`Sheet`!`Cell`!`Title`}}
 From `Cell` `(ex: A1)`, on `Sheet` scan right until the `Title` is detected, then get the last non-empty value going down from the `Title` column. Used for getting totals.
-### {{XL!LAST!sheet_name!cell_ref!Title}}
-Find column by title and get last value
+### {{XL!RANGE!`Start Cell`:`End Cell`}}
+Get values for the range starting at `Start Cell (ex: A1)` to the `End Cell (ex: G13)`. A formated table is returned.
+### {{XL!RANGE!`Sheet`!`Start Cell`:`End Cell`}}
+Get values for the range starting at `Start Cell (ex: A1)` to the `End Cell (ex: G13)` in `Sheet`. A formated table is returned.
+### {{XL!COLUMN!`Sheet`!`Cell 1`,`Cell 2`,`Cell 3`,...}}
+Returns a formatted table with columns `Cell 1 (ex: A1)`,`Cell 2 (ex: C1)`,`Cell 3 (ex: F1)...` from `Sheet` appended together. Row number must be the same for each. Example: `{{XL!COLUMN!Support!C4,E4,J4}}`.
+### {{XL!COLUMN!`Sheet`!`Title 1`,`Title 2`,`Title 3`,...!`Row`}}
+Returns a formatted table with columns with `Title 1 (ex: Item)`,`Title 2 (ex: HST)`,`Title 3 (ex: Total)...` from `Sheet` appended together. The `Title` row is specified by `Row (ex: 6)`. Example: `{{XL!COLUMN!Distribution Plan!Unit,DHTC,Total!4}}`.
+"""
+        return help_text 
 
+    def get_input_keyword_help(self):
+        """
+        Get help text explaining how to use input keywords with '!' separator.
 
+        Returns:
+            A string with help information about available keywords.
+        """
+        help_text = """
+# User Input Keywords
+If User Input keywords `{{INPUT!...}}` are detected in the uploaded document, the user will be prompt for input value(s) in Step 3.
+### {{INPUT!text!label!default_value}}
+Get a value from `Cell` `(ex: A1)`.
+### {{XL!CELL!`Sheet`!`Cell`}}
+Get a value from `Cell` `(ex: A1)` in `Sheet`.
+### {{XL!LAST!`Cell`}}
+Get the last non-empty value going down from `Cell` `(ex: A1)`. Used for getting totals.
+### {{XL!LAST!`Sheet`!`Cell`}}
+Get the last non-empty value going down from `Cell` `(ex: A1)` in `Sheet`. Used for getting totals.
+### {{XL!LAST!`Sheet`!`Cell`!`Title`}}
+From `Cell` `(ex: A1)`, on `Sheet` scan right until the `Title` is detected, then get the last non-empty value going down from the `Title` column. Used for getting totals.
+### {{XL!RANGE!`Start Cell`:`End Cell`}}
+Get values for the range starting at `Start Cell (ex: A1)` to the `End Cell (ex: G13)`. A formated table is returned.
+### {{XL!RANGE!`Sheet`!`Start Cell`:`End Cell`}}
+Get values for the range starting at `Start Cell (ex: A1)` to the `End Cell (ex: G13)` in `Sheet`. A formated table is returned.
+### {{XL!COLUMN!`Sheet`!`Cell 1`,`Cell 2`,`Cell 3`,...}}
+Returns a formatted table with columns `Cell 1 (ex: A1)`,`Cell 2 (ex: C1)`,`Cell 3 (ex: F1)...` from `Sheet` appended together. Row number must be the same for each. Example: `{{XL!COLUMN!Support!C4,E4,J4}}`.
+### {{XL!COLUMN!`Sheet`!`Title 1`,`Title 2`,`Title 3`,...!`Row`}}
+Returns a formatted table with columns with `Title 1 (ex: Item)`,`Title 2 (ex: HST)`,`Title 3 (ex: Total)...` from `Sheet` appended together. The `Title` row is specified by `Row (ex: 6)`. Example: `{{XL!COLUMN!Distribution Plan!Unit,DHTC,Total!4}}`.
 
-
-
-| Keyword | Description | Example | Result |
-|---------|-------------|---------|--------|
-| `{{XL!CELL!A1}}` | Get value from a single cell | `{{XL!CELL!B2}}` | Returns the value in cell B2 |
-| `{{XL!CELL!SheetName!B5}}` | Get value from a cell in a specific sheet | `{{XL!CELL!Sales!C3}}` | Returns the value in cell C3 of the Sales sheet |
-| `{{XL!LAST!A1}}` | Get the last non-empty value going down from A1 | `{{XL!LAST!A1}}` | Returns the last non-empty value in column A |
-| `{{XL!LAST!SheetName!B5}}` | Get last value from a specific sheet | `{{XL!LAST!Inventory!B5}}` | Returns the last non-empty value in column B of the Inventory sheet |
-| `{{XL!LAST!sheet_name!cell_ref!Title}}` | Find column by title and get last value | `{{XL!LAST!Items!A4!Total Project Costs}}` | Finds "Total Project Costs" in row 4 and returns the last value in that column |
-| `{{XL!RANGE!A1:C5}}` | Get values from a range (returns formatted table) | `{{XL!RANGE!A1:D10}}` | Returns a table with all values from A1 to D10 |
-| `{{XL!RANGE!SheetName!A1:C5}}` | Get range from specific sheet | `{{XL!RANGE!Sales!A1:D20}}` | Returns a table from the Sales sheet |
-| `{{XL!RANGE!MyNamedRange}}` | Get values from a named range | `{{XL!RANGE!QuarterlyData}}` | Returns all values in the named range "QuarterlyData" |
-| `{{XL!COLUMN!sheet_name!col_refs}}` | Get specified columns | `{{XL!COLUMN!Items!A4,E4,F4}}` | Returns a table with columns A, E, and F starting from row 4 |
-| `{{XL!COLUMN!sheet_name!titles!row}}` | Get columns by title | `{{XL!COLUMN!Items!"Activities,HST,Total Project Costs"!4}}` | Finds these titles in row 4 and returns their columns |
 
 ## User Input Keywords (`{{INPUT!...}}`)
 
@@ -1309,6 +1332,7 @@ Find column by title and get last value
 - JSON paths must start with `$.`
 """
         return help_text 
+
 
     def _normalize_text(self, text):
         """Normalize text for section name comparison to handle apostrophe variations and special characters."""
