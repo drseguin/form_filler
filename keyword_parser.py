@@ -1375,11 +1375,11 @@ Alternative syntax that also injects the full JSON content (the path `$.` refers
 ### {{JSON!`filename.json`!`$.key`}}
 Inject the content of the JSON path `key`. Example: {{JSON!!launch.json!\$.configurations}}. Example: {{JSON!launch.json!$.configurations[0].name}}.
 ### {{JSON!`filename.json`!`$.key`!`SUM`}}
-Sum the numeric values in the JSON path `key`.
+Sum the numeric values in the JSON path `key`. Example: {{JSON!sales.json!$.monthly_totals!SUM}}.   
 ### {{JSON!`filename.json`!`$.key`!`JOIN(, )`}}
-Join the values in the JSON path `key` with a comma and space.
+Join the values in the JSON path `key` with a comma and space. Example: {{JSON!users.json!$.names!JOIN(, )}}.
 ### {{JSON!`filename.json`!`$.key`!`BOOL(Yes/No)`}}
-Transform the boolean values in the JSON path `key` to custom text.
+Transform the boolean values in the JSON path `key` to custom text. Example: {{JSON!status.json!$.system_active!BOOL(Online/Offline)}}.
 
 
 
