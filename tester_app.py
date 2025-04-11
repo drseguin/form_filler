@@ -233,7 +233,10 @@ if st.session_state.excel_manager is not None:
         # Show help information
         with st.expander("Keyword Help"):
             if st.session_state.keyword_parser:
-                st.markdown(st.session_state.keyword_parser.get_keyword_help())
+                st.markdown(st.session_state.keyword_parser.get_excel_keyword_help())
+                st.markdown(st.session_state.keyword_parser.get_input_keyword_help())
+                st.markdown(st.session_state.keyword_parser.get_template_keyword_help())
+                st.markdown(st.session_state.keyword_parser.get_json_keyword_help())
         
         # Input for keyword string
         st.subheader("Parse Keywords")

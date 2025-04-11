@@ -1234,7 +1234,7 @@ class keywordParser:
 
 
 
-    def get_keyword_help(self):
+    def get_excel_keyword_help(self):
         """
         Get help text explaining how to use keywords with '!' separator.
 
@@ -1242,11 +1242,22 @@ class keywordParser:
             A string with help information about available keywords.
         """
         help_text = """
-# Keyword System Help
+# Excel Keywords
 
-This system uses keywords wrapped in double curly braces `{{}}` with parameters separated by `!`.
+### {{XL!CELL!A1}}
+Get a value from a single cell
+### {{XL!CELL!SheetName!B5}}
+Get a value from a cell in a specific sheet
+### {{XL!LAST!A1}}
+Get the last non-empty value going down from A1. Used for getting totals.
+### {{XL!LAST!SheetName!B5}}
+Get the last non-empty value going down from A1. Used for getting totals.
+### {{XL!LAST!sheet_name!cell_ref!Title}}
+Find column by title and get last value
 
-## Excel Data Keywords (`{{XL!...}}`)
+
+
+
 
 | Keyword | Description | Example | Result |
 |---------|-------------|---------|--------|

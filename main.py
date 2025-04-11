@@ -571,8 +571,16 @@ def main():
                 st.rerun()
         
         # Keyword reference guide in expandable section
-        with st.expander("Keyword Reference Guide"):
-            st.markdown(st.session_state.keyword_parser_instance_for_help.get_keyword_help())
+        with st.expander("Excel Keyword Reference Guide", expanded=False):
+            st.markdown(st.session_state.keyword_parser_instance_for_help.get_excel_keyword_help())
+        with st.expander("Input Keyword Reference Guide", expanded=False):
+            st.markdown(st.session_state.keyword_parser_instance_for_help.get_excel_keyword_help())
+        with st.expander("Template Keyword Reference Guide", expanded=False):
+            st.markdown(st.session_state.keyword_parser_instance_for_help.get_excel_keyword_help())
+        with st.expander("JSON Keyword Reference Guide", expanded=False):
+            st.markdown(st.session_state.keyword_parser_instance_for_help.get_excel_keyword_help())
+        with st.expander("AI Keyword Reference Guide", expanded=False):
+            st.markdown(st.session_state.keyword_parser_instance_for_help.get_excel_keyword_help())
 
         # Reset button
         if st.button("Reset Application"):
