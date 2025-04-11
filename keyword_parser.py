@@ -1245,23 +1245,23 @@ class keywordParser:
 # Excel Keywords
 If Excel keywords `{{XL!...}}` are detected in the uploaded document, the user will be prompt to upload an Excel file in Step 2.
 ### {{XL!CELL!`Cell`}}
-Get a value from `Cell` `(ex: A1)`.
+Get a value from `Cell` (ex: A1).
 ### {{XL!CELL!`Sheet`!`Cell`}}
-Get a value from `Cell` `(ex: A1)` in `Sheet`.
+Get a value from `Cell` (ex: A1) in `Sheet`.
 ### {{XL!LAST!`Cell`}}
-Get the last non-empty value going down from `Cell` `(ex: A1)`. Used for getting totals.
+Get the last non-empty value going down from `Cell` (ex: A1). Used for getting totals.
 ### {{XL!LAST!`Sheet`!`Cell`}}
-Get the last non-empty value going down from `Cell` `(ex: A1)` in `Sheet`. Used for getting totals.
+Get the last non-empty value going down from `Cell` (ex: A1) in `Sheet`. Used for getting totals.
 ### {{XL!LAST!`Sheet`!`Cell`!`Title`}}
-From `Cell` `(ex: A1)`, on `Sheet` scan right until the `Title` is detected, then get the last non-empty value going down from the `Title` column. Used for getting totals.
+From `Cell` (ex: A1), on `Sheet` scan right until the `Title` is detected, then get the last non-empty value going down from the `Title` column. Used for getting totals.
 ### {{XL!RANGE!`Start Cell`:`End Cell`}}
-Get values for the range starting at `Start Cell (ex: A1)` to the `End Cell (ex: G13)`. A formated table is returned.
+Get values for the range starting at `Start Cell` (ex: A1) to the `End Cell` (ex: G13). A formated table is returned.
 ### {{XL!RANGE!`Sheet`!`Start Cell`:`End Cell`}}
-Get values for the range starting at `Start Cell (ex: A1)` to the `End Cell (ex: G13)` in `Sheet`. A formated table is returned.
+Get values for the range starting at `Start Cell` (ex: A1) to the `End Cell` (ex: G13) in `Sheet`. A formated table is returned.
 ### {{XL!COLUMN!`Sheet`!`Cell 1`,`Cell 2`,`Cell 3`,...}}
-Returns a formatted table with columns `Cell 1 (ex: A1)`,`Cell 2 (ex: C1)`,`Cell 3 (ex: F1)...` from `Sheet` appended together. Row number must be the same for each. Example: `{{XL!COLUMN!Support!C4,E4,J4}}`.
+Returns a formatted table with columns `Cell 1` (ex: A1),`Cell 2` (ex: C1),`Cell 3` (ex: F1)... from `Sheet` appended together. Row number must be the same for each. Example: {{XL!COLUMN!Support!C4,E4,J4}}.
 ### {{XL!COLUMN!`Sheet`!`Title 1`,`Title 2`,`Title 3`,...!`Row`}}
-Returns a formatted table with columns with `Title 1 (ex: Item)`,`Title 2 (ex: HST)`,`Title 3 (ex: Total)...` from `Sheet` appended together. The `Title` row is specified by `Row (ex: 6)`. Example: `{{XL!COLUMN!Distribution Plan!Unit,DHTC,Total!4}}`.
+Returns a formatted table with columns with `Title 1` (ex: Item),`Title 2` (ex: HST),`Title 3` (ex: Total)... from `Sheet` appended together. The `Title` row is specified by `Row` (ex: 6). Example: {{XL!COLUMN!Distribution Plan!Unit,DHTC,Total!4}}.
 """
         return help_text 
 
@@ -1275,16 +1275,39 @@ Returns a formatted table with columns with `Title 1 (ex: Item)`,`Title 2 (ex: H
         help_text = """
 # User Input Keywords
 If User Input keywords `{{INPUT!...}}` are detected in the uploaded document, the user will be prompt for input value(s) in Step 3.
-### {{INPUT!text!label!default_value}}
-Get a value from `Cell` `(ex: A1)`.
-### {{INPUT!area!label!default_value!height}}
-Get a value from `Cell` `(ex: A1)` in `Sheet`.
-### {{INPUT!date!label!default_date!format}}
-Get a value from `Cell` `(ex: A1)` in `Sheet`.
-### {{INPUT!select!label!option1,option2,...}}
-Get a value from `Cell` `(ex: A1)` in `Sheet`.
-### {{INPUT!check!label!default_state}}
-Get a value from `Cell` `(ex: A1)` in `Sheet`.
+### {{INPUT!TEXT!`label`!`default_value`}}
+Prompt the user for a single-line text input with `label` and `default_value`.
+### {{INPUT!AREA!`label`!`default_value`!`height`}}
+Prompt the user for a multi-line text input with `label`, `default_value`, and `height (ex: 200)`.
+### {{INPUT!DATE!`label`!`default_date`!`format`}}
+Prompt the user for a date input with `label`, `default_date` (ex: 1990/01/01), and `format` (ex: YYYY/MM/DD).
+### {{INPUT!SELECT!`label`!`option1`!`option2`!`option3`!`...`}}
+Prompt the user for a dropdown selection with `label` and options `option1`, `option2`, `option3`, etc.
+### {{INPUT!CHECK!`label`!`default_state`}}
+Prompt the user for a checkbox input with `label` and `default_state` (ex: True).
+"""
+        return help_text 
+
+    def get_template_keyword_help(self):
+        """
+        Get help text explaining how to use input keywords with '!' separator.
+
+        Returns:
+            A string with help information about available keywords.
+        """
+        help_text = """
+# User Input Keywords
+If User Input keywords `{{INPUT!...}}` are detected in the uploaded document, the user will be prompt for input value(s) in Step 3.
+### {{INPUT!TEXT!`label`!`default_value`}}
+Prompt the user for a single-line text input with `label` and `default_value`.
+### {{INPUT!AREA!`label`!`default_value`!`height`}}
+Prompt the user for a multi-line text input with `label`, `default_value`, and `height (ex: 200)`.
+### {{INPUT!DATE!`label`!`default_date`!`format`}}
+Prompt the user for a date input with `label`, `default_date` (ex: 1990/01/01), and `format` (ex: YYYY/MM/DD).
+### {{INPUT!SELECT!`label`!`option1`!`option2`!`option3`!`...`}}
+Prompt the user for a dropdown selection with `label` and options `option1`, `option2`, `option3`, etc.
+### {{INPUT!CHECK!`label`!`default_state`}}
+Prompt the user for a checkbox input with `label` and `default_state` (ex: True).
 
 ## User Input Keywords (`{{INPUT!...}}`)
 
