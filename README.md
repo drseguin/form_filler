@@ -4,7 +4,7 @@
   <img src="assets/images/form_filler_logo.png" alt="FORM Filler Logo" width="200"/>
 </p>
 <p align="center">
-  <img src="assets/images/main_screen.png" alt="Main Screen" width="600"/>
+  <img src="assets/images/main_screen.png" alt="Main Screen" width="800"/>
 </p>
 
 # Form Filler
