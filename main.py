@@ -615,9 +615,6 @@ def main():
             st.session_state.doc_uploaded = True
             st.rerun()
         
-        if st.session_state.doc_uploaded:
-            #st.success(f"Document uploaded successfully!")
-            st.info("Click 'Next Step →' in the sidebar to continue.")
     
     # --- Step 2: Analysis & Excel Upload (if needed) ---
     elif st.session_state.current_step == 2:
@@ -665,11 +662,6 @@ def main():
                     st.session_state.excel_manager_instance = None
                     st.rerun()
                 
-                if st.session_state.excel_uploaded:
-                    st.success("Excel file uploaded successfully!")
-                else:
-                    st.warning("Excel file is required to proceed.")
-                    # Don't show "Next" button until Excel is uploaded
             else:
                 st.success("No Excel file required. You can proceed to the next step.")
             
@@ -678,7 +670,7 @@ def main():
                 try:
                     with st.spinner("Loading Excel data..."):
                         st.session_state.excel_manager_instance = excelManager(st.session_state.excel_path)
-                        st.success("Excel data loaded successfully!")
+#                        st.success("Excel data loaded successfully!")
                 except Exception as e:
                     st.error(f"Failed to load Excel file: {e}")
                     st.session_state.excel_uploaded = False  # Reset upload status
@@ -699,7 +691,7 @@ def main():
         
         if not has_inputs:
             st.success("No user inputs required.")
-            st.info("Click 'Next Step →' in the sidebar to continue to processing.")
+            #st.info("Click 'Next Step →' in the sidebar to continue to processing.")
         else:
             st.write("Please provide values for the keywords found in your document.")
             
@@ -756,7 +748,7 @@ def main():
                         st.rerun()
             else:
                 st.success("Input values submitted successfully!")
-                st.info("Click 'Next Step →' in the sidebar to continue to processing.")
+                #st.info("Click 'Next Step →' in the sidebar to continue to processing.")
     
     # --- Step 4: Process Document ---
     elif st.session_state.current_step == 4:
