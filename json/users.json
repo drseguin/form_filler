@@ -1,0 +1,38 @@
+{
+  "names": ["John Smith", "Maria Garcia", "David Lee", "Sarah Johnson", "Ahmed Hassan"],
+  "user_count": 5,
+  "active_users": 4,
+  "user_details": [
+    {
+      "id": 1001,
+      "name": "John Smith",
+      "email": "john.smith@example.com",
+      "active": true
+    },
+    {
+      "id": 1002,
+      "name": "Maria Garcia",
+      "email": "maria.garcia@example.com",
+      "active": true
+    },
+    {
+      "id": 1003,
+      "name": "David Lee",
+      "email": "david.lee@example.com",
+      "active": true
+    },
+    {
+      "id": 1004,
+      "name": "Sarah Johnson",
+      "email": "sarah.johnson@example.com",
+      "active": true
+    },
+    {
+      "id": 1005,
+      "name": "Ahmed Hassan",
+      "email": "ahmed.hassan@example.com",
+      "active": false
+    }
+  ],
+  "last_updated": "2023-12-15"
+} 
