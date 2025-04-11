@@ -1380,36 +1380,6 @@ Sum the numeric values in the JSON path `key`. Example: {{JSON!sales.json!$.mont
 Join the values in the JSON path `key` with a comma and space. Example: {{JSON!users.json!$.names!JOIN(, )}}.
 ### {{JSON!`filename.json`!`$.key`!`BOOL(Yes/No)`}}
 Transform the boolean values in the JSON path `key` to custom text. Example: {{JSON!status.json!$.system_active!BOOL(Online/Offline)}}.
-
-
-
-| Keyword | Description | Example | Result |
-|---------|-------------|---------|--------|
-| `{{TEMPLATE!filename.docx}}` | Get full document content | `{{TEMPLATE!contract_template.docx}}` | Returns the full contract template |
-| `{{TEMPLATE!filename.docx!section=name}}` | Get section content from document | `{{TEMPLATE!report.docx!section=conclusion}}` | Returns only the conclusion section content |
-| `{{TEMPLATE!filename.docx!section=name&title=false}}` | Get section content without the header | `{{TEMPLATE!report.docx!section=conclusion&title=false}}` | Returns the conclusion content without its heading |
-| `{{TEMPLATE!filename.docx!section=start:end}}` | Get range of sections from document | `{{TEMPLATE!report.docx!section=intro:methodology}}` | Returns content from intro through methodology sections |
-| `{{TEMPLATE!filename.docx!section=start:end&title=false}}` | Get range of sections without headers | `{{TEMPLATE!report.docx!section=intro:methodology&title=false}}` | Returns content from intro through methodology without including section headers |
-
-## JSON Data Keywords (`{{JSON!...}}`)
-
-| Keyword | Description | Example | Result |
-|---------|-------------|---------|--------|
-| `{{JSON!!filename.json}}` | Get the entire JSON file | `{{JSON!!launch.json}}` | Returns the complete JSON contents |
-| `{{JSON!!filename.json!$.}}` | Get the entire JSON file (alternative) | `{{JSON!!launch.json!$.}}` | Returns the complete JSON contents |
-| `{{JSON!filename.json!$.key}}` | Access simple JSON path | `{{JSON!config.json!$.settings.theme}}` | Returns the theme value from settings |
-| `{{JSON!data.json!$.array[0].name}}` | Access nested JSON data | `{{JSON!data.json!$.users[1].email}}` | Returns the email of the second user |
-| `{{JSON!data.json!$.values!SUM}}` | Sum numeric values in array | `{{JSON!sales.json!$.monthly_totals!SUM}}` | Sums all monthly totals |
-| `{{JSON!data.json!$.names!JOIN(,)}}` | Join array items with delimiter | `{{JSON!users.json!$.names!JOIN(, )}}` | Joins names with comma and space |
-| `{{JSON!config.json!$.enabled!BOOL(Active/Inactive)}}` | Transform boolean to custom text | `{{JSON!status.json!$.system_active!BOOL(Online/Offline)}}` | Shows "Online" or "Offline" |
-
-## Notes
-- All keywords use `!` as a separator between parameters
-- For accessing entire JSON files, you can use `{{JSON!!filename.json}}` (with empty first parameter)
-- Paths like `$.` and `$` both refer to the root of the JSON document
-- Keywords can be nested (e.g., inside template variables)
-- File paths can be relative or absolute
-- JSON paths must start with `$.`
 """
         return help_text 
 
