@@ -42,6 +42,12 @@ class keywordParser:
             os.makedirs(templates_dir)
             self.logger.info(f"Created templates directory: {templates_dir}")
         
+        # Ensure json directory exists
+        json_dir = 'json'
+        if not os.path.exists(json_dir):
+            os.makedirs(json_dir)
+            self.logger.info(f"Created json directory: {json_dir}")
+        
         self.logger.info("Initialized keywordParser")
 
     def set_word_document(self, doc):
@@ -1115,12 +1121,19 @@ class keywordParser:
                 # Recursively parse the reference
                 filename = self.parse(filename)
 
-            # Check if file exists
-            if not os.path.exists(filename):
-                return f"[JSON file not found: {filename}]"
+            # Check if file exists directly at the provided path
+            json_file_path = filename
+            if not os.path.exists(json_file_path):
+                # If not, check in the json folder
+                json_folder_path = os.path.join('json', filename)
+                if os.path.exists(json_folder_path):
+                    json_file_path = json_folder_path
+                    self.logger.info(f"Found JSON file in json folder: {json_file_path}")
+                else:
+                    return f"[JSON file not found: {filename} (checked in current directory and json folder)]"
 
             # Read the JSON file
-            with open(filename, 'r', encoding='utf-8') as file: # Added encoding
+            with open(json_file_path, 'r', encoding='utf-8') as file: # Added encoding
                 json_data = json.load(file)
 
             # Simplistic JSONPath implementation (needs a library for full support)
@@ -1204,7 +1217,7 @@ class keywordParser:
 
 
         except json.JSONDecodeError:
-            return f"[Error decoding JSON file: {filename}]"
+            return f"[Error decoding JSON file: {json_file_path}]"
         except Exception as e:
             self.excel_manager.logger.error(f"Error processing JSON keyword '{content}': {str(e)}", exc_info=True)
             return f"[Error in JSON: {str(e)}]"
@@ -1320,7 +1333,7 @@ Inject the content of the sections from `heading_start` to `heading_end` without
         """
         help_text = """
 # JSON Keywords
-If JSON keywords `{{JSON!...}}` are detected in the uploaded document, the application will look for the specified JSON file(s) `(ex: filename.json)` in the `json` folder.
+If JSON keywords `{{JSON!...}}` are detected in the uploaded document, the application will look for the specified JSON file(s) `(ex: filename.json)` in the `json` folder. The system will first look for the file at the specified path, and if not found, it will check in the 'json' directory.
 ### {{JSON!`filename.json`}}
 Inject the full JSON content.
 ### {{JSON!`filename.json`!`path=$.key`}}
