@@ -1250,8 +1250,8 @@ Get a value from a single cell
 Get a value from a cell in a specific sheet
 ### {{XL!LAST!A1}}
 Get the last non-empty value going down from A1. Used for getting totals.
-### {{XL!LAST!SheetName!B5}}
-Get the last non-empty value going down from A1. Used for getting totals.
+### {{XL!LAST!Sheet!Cell!Title}}
+From `Cell` `(ex: A1)`, on `Sheet` scan right until the `Title` is detected, then get the last non-empty value going down from the `Title` column. Used for getting totals.
 ### {{XL!LAST!sheet_name!cell_ref!Title}}
 Find column by title and get last value
 
