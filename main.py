@@ -605,15 +605,6 @@ def main():
         
         doc_file = st.file_uploader("Upload Word Document (.docx)", type=["docx"], key="main_doc_uploader")
 
-        # Show example of keywords if no document is uploaded yet
-        if not st.session_state.doc_uploaded and not doc_file:
-            with st.expander("What keywords can I use in my document?"):
-                st.write("Your document can contain various types of keywords surrounded by double curly braces `{{ }}`. For example:")
-                st.code("{{XL!CELL!A1}} - Gets a value from Excel cell A1")
-                st.code("{{INPUT!text!Name}} - Creates an input field for 'Name'")
-                st.code("{{TEMPLATE!contract.docx}} - Inserts content from another document")
-                st.write("See the Keyword Reference Guide in the sidebar for more examples.")
-
         if doc_file and not st.session_state.doc_uploaded:
             # Reset relevant states for new upload
             st.session_state.update({k: v for k, v in default_state.items() 
@@ -628,7 +619,7 @@ def main():
             st.rerun()
         
         if st.session_state.doc_uploaded:
-            st.success(f"Document uploaded successfully!")
+            #st.success(f"Document uploaded successfully!")
             st.info("Click 'Next Step →' in the sidebar to continue.")
     
     # --- Step 2: Analysis & Excel Upload (if needed) ---
