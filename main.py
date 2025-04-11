@@ -573,6 +573,10 @@ def main():
                 st.session_state.current_step += 1
                 st.rerun()
         
+        # Keyword reference guide in expandable section
+        with st.expander("Keyword Reference Guide"):
+            st.markdown(st.session_state.keyword_parser_instance_for_help.get_keyword_help())
+
         # Reset button
         if st.button("Reset Application"):
             logger.info("Resetting application state")
@@ -592,10 +596,6 @@ def main():
             for key in default_state:
                 st.session_state[key] = default_state[key]
             st.rerun()
-        
-        # Keyword reference guide in expandable section
-        with st.expander("Keyword Reference Guide"):
-            st.markdown(st.session_state.keyword_parser_instance_for_help.get_keyword_help())
     
     # Main content area - only show the current step
     # --- Step 1: Upload Word Document ---
