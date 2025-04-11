@@ -1109,12 +1109,21 @@ class keywordParser:
         try:
              # Split into filename, path, and optional transformation using '!'
             parts = content.split("!")
-            if len(parts) < 2: return "[Invalid JSON format: Filename and path required]"
+            
+            # Handle the case where the first part might be empty ({{JSON!!filename.json}})
+            if parts[0].strip() == "" and len(parts) > 1:
+                filename = parts[1].strip()
+                json_path = parts[2].strip() if len(parts) > 2 else "$"  # Default to root path
+                transform_type = parts[3].strip().upper() if len(parts) > 3 else None
+            else:
+                if len(parts) < 2: return "[Invalid JSON format: Filename and path required]"
+                filename = parts[0].strip()
+                json_path = parts[1].strip()
+                transform_type = parts[2].strip().upper() if len(parts) > 2 else None
 
-            filename = parts[0].strip()
-            json_path = parts[1].strip()
-            transform_type = parts[2].strip().upper() if len(parts) > 2 else None
-
+            # If no JSON path is specified, use root ($) as default to return the entire file
+            if not json_path:
+                json_path = "$"
 
             # Check if filename is from another reference
             if filename.startswith("{{") and filename.endswith("}}"):
@@ -1135,6 +1144,19 @@ class keywordParser:
             # Read the JSON file
             with open(json_file_path, 'r', encoding='utf-8') as file: # Added encoding
                 json_data = json.load(file)
+
+            # If path is just $ (root), return the entire JSON data
+            if json_path == "$":
+                # If we have a transform, apply it to the whole JSON object
+                if transform_type:
+                    # Handle transformations for the entire JSON object
+                    if transform_type.startswith("JOIN(") and transform_type.endswith(")"):
+                        if isinstance(json_data, list):
+                            delimiter = transform_type[5:-1]
+                            return delimiter.join(str(x) for x in json_data if x is not None)
+                        
+                # Return the complete JSON data
+                return json.dumps(json_data, indent=2)
 
             # Simplistic JSONPath implementation (needs a library for full support)
             if json_path.startswith("$."):
@@ -1334,15 +1356,17 @@ Inject the content of the sections from `heading_start` to `heading_end` without
         help_text = """
 # JSON Keywords
 If JSON keywords `{{JSON!...}}` are detected in the uploaded document, the application will look for the specified JSON file(s) `(ex: filename.json)` in the `json` folder. The system will first look for the file at the specified path, and if not found, it will check in the 'json' directory.
-### {{JSON!`filename.json`}}
+### {{JSON!`filename.json`!`$.`}}
 Inject the full JSON content.
-### {{JSON!`filename.json`!`path=$.key`}}
+### {{JSON!!`filename.json`}}
+Alternative syntax to inject the full JSON content.
+### {{JSON!`filename.json`!`$.key`}}
 Inject the content of the JSON path `path`.
-### {{JSON!`filename.json`!`path=$.key`!`transform=SUM`}}
+### {{JSON!`filename.json`!`$.key`!`SUM`}}
 Sum the numeric values in the JSON path `path`.
-### {{JSON!`filename.json`!`path=$.key`!`transform=JOIN(, )`}}
+### {{JSON!`filename.json`!`$.key`!`JOIN(, )`}}
 Join the values in the JSON path `path` with a comma and space.
-### {{JSON!`filename.json`!`path=$.key`!`transform=BOOL(Yes/No)`}}
+### {{JSON!`filename.json`!`$.key`!`BOOL(Yes/No)`}}
 Transform the boolean values in the JSON path `path` to custom text.
 
 
@@ -1359,6 +1383,7 @@ Transform the boolean values in the JSON path `path` to custom text.
 
 | Keyword | Description | Example | Result |
 |---------|-------------|---------|--------|
+| `{{JSON!!filename.json}}` | Get the entire JSON file | `{{JSON!!launch.json}}` | Returns the complete JSON contents |
 | `{{JSON!filename.json!$.key}}` | Access simple JSON path | `{{JSON!config.json!$.settings.theme}}` | Returns the theme value from settings |
 | `{{JSON!data.json!$.array[0].name}}` | Access nested JSON data | `{{JSON!data.json!$.users[1].email}}` | Returns the email of the second user |
 | `{{JSON!data.json!$.values!SUM}}` | Sum numeric values in array | `{{JSON!sales.json!$.monthly_totals!SUM}}` | Sums all monthly totals |
@@ -1367,6 +1392,7 @@ Transform the boolean values in the JSON path `path` to custom text.
 
 ## Notes
 - All keywords use `!` as a separator between parameters
+- For accessing entire JSON files, you can use `{{JSON!!filename.json}}` (with empty first parameter)
 - Keywords can be nested (e.g., inside template variables)
 - File paths can be relative or absolute
 - JSON paths must start with `$.`
