@@ -500,12 +500,6 @@ def main():
     
     logger.info("Application started")
     
-    # Create a container for the logo (top left) and app intro
-    header_container = st.container()
-    with header_container:
-        # Load and display the Form Filler logo
-        st.image("assets/images/form_filler_logo.png", width=200)
-    
     # Initialize parser instance for help text display
     if 'keyword_parser_instance_for_help' not in st.session_state:
         st.session_state.keyword_parser_instance_for_help = keywordParser()
@@ -525,6 +519,9 @@ def main():
     
     # Sidebar with keyword reference guide and reset button
     with st.sidebar:
+        # Load and display the Form Filler logo
+        st.image("assets/images/form_filler_logo.png", width=250)
+        
         st.subheader("Help & Navigation")
         
         # Add visual step indicator
