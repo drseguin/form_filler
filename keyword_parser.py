@@ -771,35 +771,59 @@ class keywordParser:
         
         Format: section=SectionName
                section=StartSection:EndSection
+               section=SectionName&title=true/false
         
         Returns:
-            Dictionary with 'start' and optionally 'end' keys
+            Dictionary with 'start', optionally 'end', and 'include_title' keys
         """
         if not param_part.startswith("section="):
             return None
         
-        # Extract the section parameter value without splitting on commas
-        # This ensures section names containing commas like "Millionaires' Row" are preserved
-        section_spec = param_part[len("section="):].strip()
+        self.logger.info(f"Parsing section parameters: '{param_part}'")
         
-        # If there are other parameters after the section parameter, they would be indicated by another marker
-        # like "section=SectionName&param2=value2" or similar
-        if "&" in section_spec:
-            section_spec = section_spec.split("&")[0].strip()
+        # Initialize result with default title value (true by default)
+        result = {'include_title': True}
+        
+        # Split into parameter pairs
+        param_pairs = param_part.split('&')
+        self.logger.info(f"Parameter pairs: {param_pairs}")
+        
+        # First handle the section parameter (expected to be the first one)
+        section_param = param_pairs[0]
+        section_value = section_param[len("section="):].strip()
+        self.logger.info(f"Extracted section value: '{section_value}'")
         
         # Check if it's a section range (contains :)
-        if ":" in section_spec:
-            start_section, end_section = section_spec.split(":", 1)
-            return {
+        if ":" in section_value:
+            start_section, end_section = section_value.split(":", 1)
+            result.update({
                 'start': start_section.strip(),
                 'end': end_section.strip()
-            }
+            })
+            self.logger.info(f"Section range: '{start_section.strip()}' to '{end_section.strip()}'")
         else:
             # Single section
-            return {
-                'start': section_spec,
+            result.update({
+                'start': section_value,
                 'end': None
-            }
+            })
+            self.logger.info(f"Single section: '{section_value}'")
+        
+        # Process any additional parameters
+        for pair in param_pairs[1:]:
+            if '=' in pair:
+                key, value = pair.split('=', 1)
+                key = key.strip().lower()
+                value = value.strip().lower()
+                self.logger.info(f"Additional parameter: {key}={value}")
+                
+                # Handle title parameter
+                if key == 'title':
+                    result['include_title'] = value == 'true'
+                    self.logger.info(f"Title parameter set to: {result['include_title']}")
+        
+        self.logger.info(f"Final section parameters: {result}")
+        return result
 
     def _process_template_keyword(self, content):
         """Process template keywords using '!' separator."""
@@ -1000,15 +1024,20 @@ class keywordParser:
                     from docx import Document
                     temp_doc = Document()
                     
-                    # Add title with section name
-                    title_para = temp_doc.add_paragraph(start_section)
-                    try:
-                        title_para.style = 'Heading 1'
-                    except:
-                        # Manually style if needed
-                        title_run = title_para.runs[0]
-                        title_run.bold = True
-                        title_run.font.size = Pt(16)
+                    # Add title with section name only if include_title is True
+                    include_title = section_info.get('include_title', True)
+                    self.logger.info(f"Include title parameter is set to: {include_title}")
+                    
+                    if include_title:
+                        # Add title with section name
+                        title_para = temp_doc.add_paragraph(start_section)
+                        try:
+                            title_para.style = 'Heading 1'
+                        except:
+                            # Manually style if needed
+                            title_run = title_para.runs[0]
+                            title_run.bold = True
+                            title_run.font.size = Pt(16)
                     
                     # Copy all paragraphs with formatting
                     for para in section_paragraphs:
@@ -1248,7 +1277,9 @@ This system uses keywords wrapped in double curly braces `{{}}` with parameters 
 |---------|-------------|---------|--------|
 | `{{TEMPLATE!filename.docx}}` | Get full document content | `{{TEMPLATE!contract_template.docx}}` | Returns the full contract template |
 | `{{TEMPLATE!filename.docx!section=name}}` | Get section content from document | `{{TEMPLATE!report.docx!section=conclusion}}` | Returns only the conclusion section content |
+| `{{TEMPLATE!filename.docx!section=name&title=false}}` | Get section content without the header | `{{TEMPLATE!report.docx!section=conclusion&title=false}}` | Returns the conclusion content without its heading |
 | `{{TEMPLATE!filename.docx!section=start:end}}` | Get range of sections from document | `{{TEMPLATE!report.docx!section=intro:methodology}}` | Returns content from intro through methodology sections |
+| `{{TEMPLATE!filename.docx!section=start:end&title=false}}` | Get range of sections without headers | `{{TEMPLATE!report.docx!section=intro:methodology&title=false}}` | Returns content from intro through methodology without including section headers |
 
 ## JSON Data Keywords (`{{JSON!...}}`)
 
