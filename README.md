@@ -111,6 +111,20 @@ If JSON keywords `{{JSON!...}}` are detected in the uploaded document, the appli
 | `{{JSON!filename.json!$.key!JOIN(, )}}` | Join the values in the JSON path `key` with a comma and space. | `{{JSON!users.json!$.names!JOIN(, )}}` → `John, Mary, Bob` |
 | `{{JSON!filename.json!$.key!BOOL(Yes/No)}}` | Transform the boolean values in the JSON path `key` to custom text. | `{{JSON!status.json!$.system_active!BOOL(Online/Offline)}}` → `Online` |
 
+##### AI Summary Keywords (`{{AI!...}}`)
+
+Keywords to generate AI-powered summaries of document content.
+
+If AI keywords `{{AI!...}}` are detected in the uploaded document, the application will look for the specified document(s) in the `ai` folder or at the specified path. If the 'ai' folder does not exist, it will be created automatically.
+
+| Keyword Pattern | Description | Example |
+| :-------------- | :---------- | :------ |
+| `{{AI!source-doc.docx!prompt_file.txt!words=100}}` | Summarize the entire document located at 'ai/source-doc.docx'. The summary will be limited to 100 words or less. The prompt for the summary can be found in 'ai/prompt_file.txt'. If the prompt file does not have a .txt extension, the text specified is treated as the actual prompt. | `{{AI!report.docx!Summarize this report!words=150}}` → *[150-word summary]* |
+| `{{AI!source-doc.docx!prompt_file.txt!section=section header&words=100}}` | Summarize a section of the document identified by 'section header' in the document located at 'ai/source-doc.docx'. The summary will be limited to 100 words or less. | `{{AI!contract.docx!Create a summary!section=Legal Terms&words=75}}` → *[75-word summary of the section]* |
+| `{{AI!source-doc.docx!prompt_file.txt!section=Attractions:Unique Experiences&words=100}}` | Summarize a range of content from 'Attractions' to 'Unique Experiences' in the document located at 'ai/source-doc.docx'. The summary will be limited to 100 words or less. | `{{AI!travel-guide.docx!concise highlights!section=History:Culture&words=100}}` → *[100-word summary of the range]* |
+
+The OpenAI API key should be stored in '.streamlit/secrets.toml' as 'openai_api_key'.
+
 #### Word Document Integration
 
 The parser integrates with `python-docx` for enhanced Word document processing:

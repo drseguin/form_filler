@@ -355,6 +355,10 @@ class keywordParser:
         # Process JSON keywords
         elif keyword_type == "JSON":
             return self._process_json_keyword(parts[1] if len(parts) > 1 else "")
+            
+        # Process AI summary keywords
+        elif keyword_type == "AI":
+            return self._process_ai_keyword(parts[1] if len(parts) > 1 else "")
 
         # Unknown keyword type
         else:
@@ -1256,6 +1260,266 @@ class keywordParser:
             self.excel_manager.logger.error(f"Error processing JSON keyword '{content}': {str(e)}", exc_info=True)
             return f"[Error in JSON: {str(e)}]"
 
+    def _process_ai_keyword(self, content):
+        """Process AI summary keywords using '!' separator."""
+        if not content:
+            return "[Invalid AI reference]"
+
+        try:
+            # Split into source document, prompt, and optional parameters using '!'
+            parts = content.split("!")
+            if len(parts) < 2:
+                return "[Invalid AI format: Source document and prompt required]"
+                
+            source_doc = parts[0].strip()
+            prompt_ref = parts[1].strip()
+            
+            # Parse optional parameters
+            params = {}
+            if len(parts) > 2:
+                param_parts = parts[2].split("&") if parts[2] else []
+                for param in param_parts:
+                    if "=" in param:
+                        key, value = param.split("=", 1)
+                        params[key.strip().lower()] = value.strip()
+            
+            # Get specific parameters with defaults
+            words_limit = int(params.get("words", "100"))
+            section_info = None
+            
+            # Process section parameter if present
+            if "section" in params:
+                section_value = params["section"]
+                if ":" in section_value:
+                    # It's a section range
+                    start_section, end_section = section_value.split(":", 1)
+                    section_info = {
+                        'start': start_section.strip(),
+                        'end': end_section.strip()
+                    }
+                else:
+                    # Single section
+                    section_info = {
+                        'start': section_value.strip(),
+                        'end': None
+                    }
+            
+            # Check if AI directory exists, create if not
+            ai_dir = "ai"
+            if not os.path.exists(ai_dir):
+                os.makedirs(ai_dir)
+                self.logger.info(f"Created AI directory: {ai_dir}")
+            
+            # First check if source document exists
+            source_path = source_doc
+            if not os.path.exists(source_path):
+                # If not found at specified path, check in ai folder
+                ai_source_path = os.path.join(ai_dir, source_doc)
+                if os.path.exists(ai_source_path):
+                    source_path = ai_source_path
+                    self.logger.info(f"Found source document in AI folder: {source_path}")
+                else:
+                    return f"[Source document not found: {source_doc} (checked in current directory and ai folder)]"
+            
+            # Extract text from the document to summarize
+            document_text = ""
+            
+            try:
+                # Handle various document types
+                if source_path.lower().endswith('.docx'):
+                    from docx import Document
+                    doc = Document(source_path)
+                    
+                    # If section info is provided, extract only that section
+                    if section_info:
+                        # Similar to template section extraction logic
+                        start_section = section_info['start']
+                        end_section = section_info['end']
+                        
+                        # Find the section(s) in the document
+                        found_start = False
+                        found_end = False
+                        section_paragraphs = []
+                        
+                        # First pass: find sections by headings or standalone titles
+                        for i, para in enumerate(doc.paragraphs):
+                            # Skip empty paragraphs
+                            if not para.text.strip():
+                                continue
+                                
+                            # Check if this is a heading-like paragraph
+                            is_heading = para.style and "heading" in para.style.name.lower()
+                            is_title = (para.text.strip() and 
+                                       len(para.text.strip()) < 100 and 
+                                       not para.text.strip().endswith('.') and
+                                       not para.text.strip().endswith(','))
+                            
+                            heading_text = para.text.strip()
+                            
+                            # Look for start section
+                            if not found_start:
+                                # Try exact match
+                                if heading_text == start_section:
+                                    found_start = True
+                                    self.logger.info(f"Found start section at paragraph {i}: '{heading_text}'")
+                                    section_paragraphs.append(para)
+                                    continue
+                                
+                                # Try normalized comparison
+                                norm_heading = self._normalize_text(heading_text)
+                                norm_start_section = self._normalize_text(start_section)
+                                
+                                if (norm_heading == norm_start_section or 
+                                    norm_start_section in norm_heading or 
+                                    (len(norm_start_section) > 5 and norm_heading in norm_start_section)):
+                                    found_start = True
+                                    self.logger.info(f"Found start section (normalized match) at paragraph {i}: '{heading_text}'")
+                                    section_paragraphs.append(para)
+                                    continue
+                            
+                            # If we're in the section, collect paragraphs until end
+                            elif not found_end:
+                                # If end section is specified, check if we've reached it
+                                if end_section:
+                                    # Try exact match for end section
+                                    if heading_text == end_section:
+                                        found_end = True
+                                        self.logger.info(f"Found end section at paragraph {i}: '{heading_text}'")
+                                        break
+                                    
+                                    # Try normalized comparison for end section
+                                    norm_heading = self._normalize_text(heading_text)
+                                    norm_end_section = self._normalize_text(end_section)
+                                    
+                                    if (norm_heading == norm_end_section or 
+                                        norm_end_section in norm_heading):
+                                        found_end = True
+                                        self.logger.info(f"Found end section (normalized match) at paragraph {i}: '{heading_text}'")
+                                        break
+                                
+                                # If no end section or if this isn't the end, but we're in a new section
+                                elif (not end_section and 
+                                     (is_heading or 
+                                      (is_title and heading_text != start_section and 
+                                       self._normalize_text(heading_text) != self._normalize_text(start_section)))):
+                                    found_end = True
+                                    self.logger.info(f"Found next heading at paragraph {i}: '{heading_text}'")
+                                    break
+                                
+                                # Add paragraph to section content
+                                section_paragraphs.append(para)
+                        
+                        # Extract text from the section paragraphs
+                        if found_start:
+                            document_text = "\n".join([p.text for p in section_paragraphs if p.text.strip()])
+                        else:
+                            return f"[Section '{start_section}' not found in {source_doc}]"
+                    else:
+                        # Extract all text from the document
+                        document_text = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+                
+                elif source_path.lower().endswith('.txt'):
+                    # For text files, read directly
+                    with open(source_path, 'r', encoding='utf-8') as file:
+                        document_text = file.read()
+                
+                else:
+                    return f"[Unsupported document type: {source_path}. Please use .docx or .txt files]"
+            
+            except Exception as e:
+                self.logger.error(f"Error extracting text from document: {str(e)}", exc_info=True)
+                return f"[Error extracting text: {str(e)}]"
+            
+            # If no text was extracted
+            if not document_text.strip():
+                return "[No text found to summarize]"
+            
+            # Get the prompt from file or use directly
+            prompt_text = ""
+            if prompt_ref.lower().endswith('.txt'):
+                # Look for prompt file
+                prompt_path = prompt_ref
+                if not os.path.exists(prompt_path):
+                    # Check in AI folder
+                    ai_prompt_path = os.path.join(ai_dir, prompt_ref)
+                    if os.path.exists(ai_prompt_path):
+                        prompt_path = ai_prompt_path
+                    else:
+                        return f"[Prompt file not found: {prompt_ref} (checked in current directory and ai folder)]"
+                
+                # Read prompt from file
+                try:
+                    with open(prompt_path, 'r', encoding='utf-8') as file:
+                        prompt_text = file.read().strip()
+                except Exception as e:
+                    self.logger.error(f"Error reading prompt file: {str(e)}", exc_info=True)
+                    return f"[Error reading prompt file: {str(e)}]"
+            else:
+                # Use the prompt text directly
+                prompt_text = prompt_ref
+            
+            # Read OpenAI API key from .streamlit/secrets.toml
+            api_key = None
+            secrets_path = os.path.join('.streamlit', 'secrets.toml')
+            if os.path.exists(secrets_path):
+                try:
+                    # Parse toml file manually since toml module might not be available
+                    with open(secrets_path, 'r', encoding='utf-8') as file:
+                        for line in file:
+                            if line.strip().startswith('openai_api_key'):
+                                parts = line.strip().split('=', 1)
+                                if len(parts) == 2:
+                                    api_key = parts[1].strip().strip('"\'')
+                                    break
+                except Exception as e:
+                    self.logger.error(f"Error reading secrets file: {str(e)}", exc_info=True)
+                    return f"[Error reading API key: {str(e)}]"
+            
+            if not api_key:
+                return "[OpenAI API key not found in .streamlit/secrets.toml]"
+            
+            # Call OpenAI API to generate summary
+            try:
+                import openai
+                
+                # Set API key
+                openai.api_key = api_key
+                
+                # Create prompt with instructions
+                full_prompt = f"{prompt_text}\n\nText to summarize (keep under {words_limit} words):\n\n{document_text}"
+                
+                # Call OpenAI API
+                response = openai.Completion.create(
+                    model="gpt-3.5-turbo-instruct",  # Or another appropriate model
+                    prompt=full_prompt,
+                    max_tokens=words_limit * 2,  # Approximate token count
+                    temperature=0.5
+                )
+                
+                summary = response.choices[0].text.strip()
+                
+                # Count words and warn if exceeded
+                word_count = len(summary.split())
+                if word_count > words_limit:
+                    self.logger.warning(f"Summary exceeds word limit: {word_count} > {words_limit}")
+                    # Truncate to the word limit
+                    summary_words = summary.split()
+                    summary = " ".join(summary_words[:words_limit])
+                    summary += "..."
+                
+                return summary
+            
+            except ImportError:
+                self.logger.error("OpenAI library not available")
+                return "[Error: OpenAI library not available. Install with 'pip install openai']"
+            
+            except Exception as e:
+                self.logger.error(f"Error generating summary: {str(e)}", exc_info=True)
+                return f"[Error generating summary: {str(e)}]"
+                
+        except Exception as e:
+            self.logger.error(f"Error processing AI keyword: {str(e)}", exc_info=True)
+            return f"[Error in AI: {str(e)}]"
 
     def reset_form_state(self):
         """Reset the form submission state and clear cached values."""
@@ -1392,10 +1656,20 @@ Transform the boolean values in the JSON path `key` to custom text. Example: {{J
         """
         help_text = """
 # AI Keywords
-If AI keywords `{{AI!...}}` are detected in the uploaded document, the application will look for the specified AI file(s) `(ex: ai_document.json)` in the `ai` folder. The system will first look for the file at the specified path, and if not found, it will check in the 'ai' directory.
-*** COMMING SOON ***
+If AI keywords `{{AI!...}}` are detected in the uploaded document, the application will look for the specified document(s) in the `ai` folder or at the specified path. If the 'ai' folder does not exist, it will be created automatically.
+
+### {{AI!`source-doc.docx`!`prompt_file.txt`!`words=100`}}
+Summarize the entire document located at 'ai/source-doc.docx'. The summary will be limited to 100 words or less. The prompt for the summary can be found in 'ai/prompt_file.txt'. If the prompt file does not have a .txt extension, the text specified is treated as the actual prompt.
+
+### {{AI!`source-doc.docx`!`prompt_file.txt`!`section=section header&words=100`}}
+Summarize a section of the document identified by 'section header' in the document located at 'ai/source-doc.docx'. The summary will be limited to 100 words or less. The prompt for the summary can be found in 'ai/prompt_file.txt', or the text provided directly if not a .txt file.
+
+### {{AI!`source-doc.docx`!`prompt_file.txt`!`section=Attractions:Unique Experiences&words=100`}}
+Summarize a range of content from 'Attractions' to 'Unique Experiences' in the document located at 'ai/source-doc.docx'. The summary will be limited to 100 words or less. The prompt for the summary can be found in 'ai/prompt_file.txt', or the text provided directly if not a .txt file.
+
+The OpenAI API key should be stored in '.streamlit/secrets.toml' as 'openai_api_key'.
 """
-        return help_text 
+        return help_text
 
     def _normalize_text(self, text):
         """Normalize text for section name comparison to handle apostrophe variations and special characters."""
