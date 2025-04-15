@@ -145,7 +145,7 @@ The application can be configured through `config.json`. Key configuration optio
   },
   "spacy": {
     "enabled": true,
-    "model": "en_core_web_sm",
+    "model": "en_core_web_trf",
     "format_entities": true,
     "paragraph_breaks": true,
     "entity_styles": {

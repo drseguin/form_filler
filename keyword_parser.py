@@ -83,7 +83,7 @@ class keywordParser:
                 },
                 "spacy": {
                     "enabled": True,
-                    "model": "en_core_web_sm",
+                    "model": "en_core_web_trf",
                     "format_entities": True,
                     "paragraph_breaks": True,
                     "entity_styles": {
@@ -1643,7 +1643,7 @@ class keywordParser:
             from spacy.tokens import Doc
             
             # Get spaCy model name from config or use default
-            model_name = spacy_config.get("model", "en_core_web_sm")
+            model_name = spacy_config.get("model", "en_core_web_trf")
             
             # Load spaCy model
             try:
