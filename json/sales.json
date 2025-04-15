@@ -1,0 +1,13 @@
+{
+  "monthly_totals": [1200.50, 1450.75, 1325.25, 1500.00, 1625.50, 1750.25],
+  "quarterly_breakdown": {
+    "Q1": [1200.50, 1450.75, 1325.25],
+    "Q2": [1500.00, 1625.50, 1750.25]
+  },
+  "year": 2023,
+  "currency": "USD",
+  "metadata": {
+    "report_generated": "2023-12-31",
+    "department": "Sales"
+  }
+} 

@@ -919,7 +919,7 @@ def main():
     # --- Step 1: Upload Word Document ---
     if st.session_state.current_step == 1:
         st.header("Step 1: Upload Document")
-        st.write("Upload a Word document containing keywords that you want to process. The document should include keywords in double curly braces like `{{keyword}}`.")
+        st.write("Upload a Word document containing keywords that you want to process. The document should include keywords in double curly braces like `{{keyword}}`. Refer to the Keyword Reference Guides in the sidebar for Keyword Help.")
         
         doc_file = st.file_uploader("Upload Word Document (.docx)", type=["docx"], key="main_doc_uploader")
 
@@ -940,7 +940,7 @@ def main():
     # --- Step 2: Analysis & Excel Upload (if needed) ---
     elif st.session_state.current_step == 2:
         st.header("Step 2: Document Analysis & Required Files")
-        st.write("This step analyzes your document to identify keywords and determines if additional files (like Excel) are needed.")
+        st.write("This step analyzes your document to identify keywords and determines if additional files (like Excel, Templates, JSON, AI Source, or AI Prompt files) are needed.")
         
         # First run analysis if needed
         if not st.session_state.analysis_summary:
@@ -975,8 +975,8 @@ def main():
                     excel_files_not_found = st.session_state.analysis_summary["excel_files_not_found"]
                     
                     if excel_files_not_found:
-                        st.write("### Excel Files Required")
-                        st.write("The following Excel files were specified in the document but not found. Please upload them:")
+                        st.write("### Excel File(s) Required")
+                        st.write("The following Excel file(s) were specified in the document but not found. Please upload them:")
                         
                         for excel_file in excel_files_not_found:
                             # Check if this file has already been uploaded
@@ -1081,8 +1081,8 @@ def main():
                 template_files_not_found = st.session_state.analysis_summary.get("template_files_not_found", [])
                 
                 if template_files_not_found:
-                    st.write("### Template Files Required")
-                    st.write("The following template files were specified in the document but not found. Please upload them:")
+                    st.write("### Template File(s) Required")
+                    st.write("The following template file(s) were specified in the document but not found. Please upload them:")
                     
                     for template_file in template_files_not_found:
                         # Check if this file has already been uploaded
@@ -1143,8 +1143,8 @@ def main():
                 json_files_not_found = st.session_state.analysis_summary.get("json_files_not_found", [])
                 
                 if json_files_not_found:
-                    st.write("### JSON Files Required")
-                    st.write("The following JSON files were specified in the document but not found. Please upload them:")
+                    st.write("### JSON File(s) Required")
+                    st.write("The following JSON file(s) were specified in the document but not found. Please upload them:")
                     
                     for json_file in json_files_not_found:
                         # Check if this file has already been uploaded
@@ -1206,8 +1206,8 @@ def main():
                 ai_source_files_not_found = st.session_state.analysis_summary.get("ai_source_files_not_found", [])
                 
                 if ai_source_files_not_found:
-                    st.write("### AI Source Files Required")
-                    st.write("The following AI source files were specified in the document but not found. Please upload them:")
+                    st.write("### AI Source File(s) Required")
+                    st.write("The following AI source file(s) were specified in the document but not found. Please upload them:")
                     
                     for ai_file in ai_source_files_not_found:
                         # Check if this file has already been uploaded
@@ -1246,8 +1246,8 @@ def main():
                 ai_prompt_files_not_found = st.session_state.analysis_summary.get("ai_prompt_files_not_found", [])
                 
                 if ai_prompt_files_not_found:
-                    st.write("### AI Prompt Files Required")
-                    st.write("The following AI prompt files were specified in the document but not found. Please upload them:")
+                    st.write("### AI Prompt File(s) Required")
+                    st.write("The following AI prompt file(s) were specified in the document but not found. Please upload them:")
                     
                     for prompt_file in ai_prompt_files_not_found:
                         # Check if this file has already been uploaded
@@ -1295,10 +1295,10 @@ def main():
                     # Show status of what's still missing
                     if ai_source_files_not_found and not all_ai_source_uploaded:
                         missing_source = [f for f in ai_source_files_not_found if f not in st.session_state.ai_source_files_uploaded]
-                        st.info(f"Still waiting for AI source files: {', '.join(missing_source)}")
+                        #st.info(f"Still waiting for AI source files: {', '.join(missing_source)}")
                     if ai_prompt_files_not_found and not all_ai_prompt_uploaded:
                         missing_prompts = [f for f in ai_prompt_files_not_found if f not in st.session_state.ai_prompt_files_uploaded]
-                        st.info(f"Still waiting for AI prompt files: {', '.join(missing_prompts)}")
+                        #st.info(f"Still waiting for AI prompt files: {', '.join(missing_prompts)}")
                 
                 # If no missing files were found but we need AI
                 if not ai_source_files_not_found and not ai_prompt_files_not_found and ai_source_files:
@@ -1413,7 +1413,7 @@ def main():
     # --- Step 4: Process Document ---
     elif st.session_state.current_step == 4:
         st.header("Step 4: Process Document")
-        st.write("Now the system will replace all keywords in your document with their corresponding values from Excel, user inputs, and templates.")
+        st.write("Now the system will replace all keywords in your document with their corresponding values from User Inputs, Excel, Templates, JSON, and AI Keywords.")
         
         # Determine if ready to process
         needs_excel = st.session_state.analysis_summary and st.session_state.analysis_summary["needs_excel"]
