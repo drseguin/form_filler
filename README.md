@@ -22,7 +22,7 @@ This powerful templating system enables dynamic document generation with data-dr
 The application provides a user-friendly Streamlit interface that guides users through a 5-step workflow:
 
 1. **Document Upload**: Upload a Word document containing keywords.
-2. **Analysis & File Uploads**: The system analyzes the keywords, identifies what data sources are needed, and prompts for Excel upload if necessary.
+2. **Analysis & File Uploads**: The system analyzes the keywords, identifies what data sources are needed, and prompts for Excel, Template, JSON or AI files to be uploaded if necessary.
 3. **User Input**: If the document contains `INPUT` keywords, the app generates a form to collect user inputs.
 4. **Processing**: The keywords are processed and replaced with actual data.
 5. **Download**: The processed document is available for download.
