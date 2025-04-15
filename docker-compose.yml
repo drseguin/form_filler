@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  form_filler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: form_filler
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./excel:/app/excel
+      - ./templates:/app/templates
+      - ./json:/app/json
+      - ./ai:/app/ai
+      - ./logs:/app/logs
+      - ./config.json:/app/config.json
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s 
