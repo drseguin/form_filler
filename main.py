@@ -1700,18 +1700,28 @@ def main():
                     
                     st.write("You can also:")
                     if st.button("Start Over with a New Document"):
-                        # Reset to initial state but keep the help parser
+                        # Reset to initial state but keep the help parser and API key state
                         if st.session_state.doc_path and os.path.exists(st.session_state.doc_path): 
                             os.unlink(st.session_state.doc_path)
                         if st.session_state.excel_path and os.path.exists(st.session_state.excel_path): 
                             os.unlink(st.session_state.excel_path)
                         if st.session_state.processed_doc_path and os.path.exists(st.session_state.processed_doc_path):
                             os.unlink(st.session_state.processed_doc_path)
-                        # Reset state except keyword_parser_instance_for_help
+                        # Save values we want to preserve
                         parser_for_help = st.session_state.keyword_parser_instance_for_help
+                        api_key = st.session_state.get('openai_api_key', '')
+                        api_key_valid = st.session_state.get('api_key_valid', False)
+                        api_key_checked = st.session_state.get('api_key_checked', False)
+                        
+                        # Reset state
                         for key in default_state:
                             st.session_state[key] = default_state[key]
+                        
+                        # Restore preserved values
                         st.session_state.keyword_parser_instance_for_help = parser_for_help
+                        st.session_state['openai_api_key'] = api_key
+                        st.session_state['api_key_valid'] = api_key_valid
+                        st.session_state['api_key_checked'] = api_key_checked
                         st.rerun()
             except FileNotFoundError:
                 st.error("Processed file not found. Please try processing again.")
