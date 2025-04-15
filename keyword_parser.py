@@ -2,6 +2,7 @@
 import re
 import json
 import os
+from pathlib import Path
 import streamlit as st
 import logging
 from datetime import date, datetime
@@ -37,19 +38,42 @@ class keywordParser:
         self.word_document = None
         self.input_values = {}  # Store input values
         
+        # Load configuration from config.json
+        self.config = self._load_config()
+        
+        # Get paths from config
+        self.templates_dir = Path(self.config["paths"]["templates"])
+        self.json_dir = Path(self.config["paths"]["json"])
+        self.ai_dir = Path(self.config["paths"]["ai"])
+        
         # Ensure templates directory exists
-        templates_dir = 'templates'
-        if not os.path.exists(templates_dir):
-            os.makedirs(templates_dir)
-            self.logger.info(f"Created templates directory: {templates_dir}")
+        if not self.templates_dir.exists():
+            self.templates_dir.mkdir(parents=True, exist_ok=True)
+            self.logger.info(f"Created templates directory: {self.templates_dir}")
         
         # Ensure json directory exists
-        json_dir = 'json'
-        if not os.path.exists(json_dir):
-            os.makedirs(json_dir)
-            self.logger.info(f"Created json directory: {json_dir}")
+        if not self.json_dir.exists():
+            self.json_dir.mkdir(parents=True, exist_ok=True)
+            self.logger.info(f"Created json directory: {self.json_dir}")
         
         self.logger.info("Initialized keywordParser")
+
+    def _load_config(self) -> dict:
+        """Load configuration from config.json file."""
+        config_path = Path("config.json")
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            self.logger.error(f"Error loading config.json: {str(e)}")
+            # Return default config if file can't be loaded
+            return {
+                "paths": {
+                    "templates": "templates",
+                    "json": "json",
+                    "ai": "ai"
+                }
+            }
 
     def set_word_document(self, doc):
         """Set the word document for direct table insertion."""
@@ -858,11 +882,11 @@ class keywordParser:
                  return "[Invalid library template reference]"
 
             # Always look in the templates directory
-            template_path = os.path.join('templates', filename)
+            template_path = self.templates_dir / filename
             self.logger.info(f"Template path resolved to: {template_path}")
 
             # Check if file exists first
-            if not os.path.exists(template_path):
+            if not template_path.exists():
                 self.logger.warning(f"Template file not found: {template_path}")
                 return f"[Template file not found: {template_path}]"
             
@@ -1096,7 +1120,7 @@ class keywordParser:
             elif filename.lower().endswith('.docx') and not param_part:
                 self.logger.info(f"Including entire document: {template_path}")
                 # Return the template path to be inserted
-                return {"docx_template": template_path}
+                return {"docx_template": str(template_path)}
             else:
                 # Unknown parameter
                 self.logger.warning(f"Unknown parameter: {param_part}")
@@ -1140,18 +1164,18 @@ class keywordParser:
                 filename = self.parse(filename)
 
             # Check if file exists directly at the provided path
-            json_file_path = filename
-            if not os.path.exists(json_file_path):
+            json_file_path = Path(filename)
+            if not json_file_path.exists():
                 # If not, check in the json folder
-                json_folder_path = os.path.join('json', filename)
-                if os.path.exists(json_folder_path):
+                json_folder_path = self.json_dir / filename
+                if json_folder_path.exists():
                     json_file_path = json_folder_path
                     self.logger.info(f"Found JSON file in json folder: {json_file_path}")
                 else:
                     return f"[JSON file not found: {filename} (checked in current directory and json folder)]"
 
             # Read the JSON file
-            with open(json_file_path, 'r', encoding='utf-8') as file: # Added encoding
+            with open(json_file_path, 'r', encoding='utf-8') as file:
                 json_data = json.load(file)
 
             # If path is just $ (root), return the entire JSON data
@@ -1262,33 +1286,41 @@ class keywordParser:
             return f"[Error in JSON: {str(e)}]"
 
     def _process_ai_keyword(self, content):
-        """Process AI summary keywords using '!' separator."""
+        """Process AI keywords using '!' separator."""
         if not content:
             return "[Invalid AI reference]"
-
+            
         try:
-            # Split into source document, prompt, and optional parameters using '!'
+            # Split content to get document, prompt, and parameters
             parts = content.split("!")
             if len(parts) < 2:
                 return "[Invalid AI format: Source document and prompt required]"
-                
+            
             source_doc = parts[0].strip()
             prompt_ref = parts[1].strip()
             
-            # Parse optional parameters
+            # Process parameters (words limit, section)
             params = {}
             if len(parts) > 2:
-                param_parts = parts[2].split("&") if parts[2] else []
-                for param in param_parts:
+                param_part = parts[2]
+                # Simple parameter parsing (key=value&key2=value2)
+                for param in param_part.split("&"):
                     if "=" in param:
                         key, value = param.split("=", 1)
                         params[key.strip().lower()] = value.strip()
             
-            # Get specific parameters with defaults
-            words_limit = int(params.get("words", "100"))
-            section_info = None
+            # Get words limit with default to 100
+            words_limit = 100
+            if "words" in params:
+                try:
+                    words_limit = int(params["words"])
+                except ValueError:
+                    pass
+            
+            self.logger.info(f"AI processing with words limit: {words_limit}")
             
             # Process section parameter if present
+            section_info = None
             if "section" in params:
                 section_value = params["section"]
                 if ":" in section_value:
@@ -1306,17 +1338,16 @@ class keywordParser:
                     }
             
             # Check if AI directory exists, create if not
-            ai_dir = "ai"
-            if not os.path.exists(ai_dir):
-                os.makedirs(ai_dir)
-                self.logger.info(f"Created AI directory: {ai_dir}")
+            if not self.ai_dir.exists():
+                self.ai_dir.mkdir(parents=True, exist_ok=True)
+                self.logger.info(f"Created AI directory: {self.ai_dir}")
             
             # First check if source document exists
-            source_path = source_doc
-            if not os.path.exists(source_path):
+            source_path = Path(source_doc)
+            if not source_path.exists():
                 # If not found at specified path, check in ai folder
-                ai_source_path = os.path.join(ai_dir, source_doc)
-                if os.path.exists(ai_source_path):
+                ai_source_path = self.ai_dir / source_doc
+                if ai_source_path.exists():
                     source_path = ai_source_path
                     self.logger.info(f"Found source document in AI folder: {source_path}")
                 else:
@@ -1327,7 +1358,7 @@ class keywordParser:
             
             try:
                 # Handle various document types
-                if source_path.lower().endswith('.docx'):
+                if source_path.name.lower().endswith('.docx'):
                     from docx import Document
                     doc = Document(source_path)
                     
@@ -1419,7 +1450,7 @@ class keywordParser:
                         # Extract all text from the document
                         document_text = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
                 
-                elif source_path.lower().endswith('.txt'):
+                elif source_path.name.lower().endswith('.txt'):
                     # For text files, read directly
                     with open(source_path, 'r', encoding='utf-8') as file:
                         document_text = file.read()
@@ -1439,11 +1470,11 @@ class keywordParser:
             prompt_text = ""
             if prompt_ref.lower().endswith('.txt'):
                 # Look for prompt file
-                prompt_path = prompt_ref
-                if not os.path.exists(prompt_path):
+                prompt_path = Path(prompt_ref)
+                if not prompt_path.exists():
                     # Check in AI folder
-                    ai_prompt_path = os.path.join(ai_dir, prompt_ref)
-                    if os.path.exists(ai_prompt_path):
+                    ai_prompt_path = self.ai_dir / prompt_ref
+                    if ai_prompt_path.exists():
                         prompt_path = ai_prompt_path
                     else:
                         return f"[Prompt file not found: {prompt_ref} (checked in current directory and ai folder)]"
@@ -1513,27 +1544,27 @@ class keywordParser:
         Returns:
             A string with help information about available keywords.
         """
-        help_text = """
+        help_text = f"""
 # Excel Keywords
-If Excel keywords `{{XL!...}}` are detected in the uploaded document, the user will be prompt to upload an Excel file in Step 2.
-### {{XL!CELL!`Cell`}}
+If Excel keywords `{{{{XL!...}}}}` are detected in the uploaded document, the user will be prompt to upload an Excel file in Step 2.
+### {{{{XL!CELL!`Cell`}}}}
 Get a value from `Cell` (ex: A1).
-### {{XL!CELL!`Sheet`!`Cell`}}
+### {{{{XL!CELL!`Sheet`!`Cell`}}}}
 Get a value from `Cell` (ex: A1) in `Sheet`.
-### {{XL!LAST!`Cell`}}
+### {{{{XL!LAST!`Cell`}}}}
 Get the last non-empty value going down from `Cell` (ex: A1). Used for getting totals.
-### {{XL!LAST!`Sheet`!`Cell`}}
+### {{{{XL!LAST!`Sheet`!`Cell`}}}}
 Get the last non-empty value going down from `Cell` (ex: A1) in `Sheet`. Used for getting totals.
-### {{XL!LAST!`Sheet`!`Cell`!`Title`}}
+### {{{{XL!LAST!`Sheet`!`Cell`!`Title`}}}}
 From `Cell` (ex: A1), on `Sheet` scan right until the `Title` is detected, then get the last non-empty value going down from the `Title` column. Used for getting totals.
-### {{XL!RANGE!`Start Cell`:`End Cell`}}
+### {{{{XL!RANGE!`Start Cell`:`End Cell`}}}}
 Get values for the range starting at `Start Cell` (ex: A1) to the `End Cell` (ex: G13). A formated table is returned.
-### {{XL!RANGE!`Sheet`!`Start Cell`:`End Cell`}}
+### {{{{XL!RANGE!`Sheet`!`Start Cell`:`End Cell`}}}}
 Get values for the range starting at `Start Cell` (ex: A1) to the `End Cell` (ex: G13) in `Sheet`. A formated table is returned.
-### {{XL!COLUMN!`Sheet`!`Cell 1`,`Cell 2`,`Cell 3`,...}}
-Returns a formatted table with columns `Cell 1` (ex: A1),`Cell 2` (ex: C1),`Cell 3` (ex: F1)... from `Sheet` appended together. Row number must be the same for each. Example: {{XL!COLUMN!Support!C4,E4,J4}}.
-### {{XL!COLUMN!`Sheet`!`Title 1`,`Title 2`,`Title 3`,...!`Row`}}
-Returns a formatted table with columns with `Title 1` (ex: Item),`Title 2` (ex: HST),`Title 3` (ex: Total)... from `Sheet` appended together. The `Title` row is specified by `Row` (ex: 6). Example: {{XL!COLUMN!Distribution Plan!Unit,DHTC,Total!4}}.
+### {{{{XL!COLUMN!`Sheet`!`Cell 1`,`Cell 2`,`Cell 3`,...}}}}
+Returns a formatted table with columns `Cell 1` (ex: A1),`Cell 2` (ex: C1),`Cell 3` (ex: F1)... from `Sheet` appended together. Row number must be the same for each. Example: {{{{XL!COLUMN!Support!C4,E4,J4}}}}.
+### {{{{XL!COLUMN!`Sheet`!`Title 1`,`Title 2`,`Title 3`,...!`Row`}}}}
+Returns a formatted table with columns with `Title 1` (ex: Item),`Title 2` (ex: HST),`Title 3` (ex: Total)... from `Sheet` appended together. The `Title` row is specified by `Row` (ex: 6). Example: {{{{XL!COLUMN!Distribution Plan!Unit,DHTC,Total!4}}}}.
 """
         return help_text 
 
@@ -1544,18 +1575,18 @@ Returns a formatted table with columns with `Title 1` (ex: Item),`Title 2` (ex: 
         Returns:
             A string with help information about available keywords.
         """
-        help_text = """
+        help_text = f"""
 # User Input Keywords
-If User Input keywords `{{INPUT!...}}` are detected in the uploaded document, the user will be prompt for input value(s) in Step 3.
-### {{INPUT!TEXT!`label`!`default_value`}}
+If User Input keywords `{{{{INPUT!...}}}}` are detected in the uploaded document, the user will be prompt for input value(s) in Step 3.
+### {{{{INPUT!TEXT!`label`!`default_value`}}}}
 Prompt the user for a single-line text input with `label` and `default_value`.
-### {{INPUT!AREA!`label`!`default_value`!`height`}}
+### {{{{INPUT!AREA!`label`!`default_value`!`height`}}}}
 Prompt the user for a multi-line text input with `label`, `default_value`, and `height (ex: 200)`.
-### {{INPUT!DATE!`label`!`default_date`!`format`}}
+### {{{{INPUT!DATE!`label`!`default_date`!`format`}}}}
 Prompt the user for a date input with `label`, `default_date` (ex: 1990/01/01), and `format` (ex: YYYY/MM/DD).
-### {{INPUT!SELECT!`label`!`option1`!`option2`!`option3`!`...`}}
+### {{{{INPUT!SELECT!`label`!`option1`!`option2`!`option3`!`...`}}}}
 Prompt the user for a dropdown selection with `label` and options `option1`, `option2`, `option3`, etc.
-### {{INPUT!CHECK!`label`!`default_state`}}
+### {{{{INPUT!CHECK!`label`!`default_state`}}}}
 Prompt the user for a checkbox input with `label` and `default_state` (ex: True).
 """
         return help_text 
@@ -1567,18 +1598,18 @@ Prompt the user for a checkbox input with `label` and `default_state` (ex: True)
         Returns:
             A string with help information about available keywords.
         """
-        help_text = """
+        help_text = f"""
 # Template Keywords
-If Template keywords `{{TEMPLATE!...}}` are detected in the uploaded document, the application will look for the specified template file(s) `(ex: filename.docx)` in the `templates` folder.
-### {{TEMPLATE!`filename.docx`}}
+If Template keywords `{{{{TEMPLATE!...}}}}` are detected in the uploaded document, the application will look for the specified template file(s) `(ex: filename.docx)` in the `{self.templates_dir}` folder.
+### {{{{TEMPLATE!`filename.docx`}}}}
 Inject the full document content.
-### {{TEMPLATE!`filename.docx`!`section=heading`}}
+### {{{{TEMPLATE!`filename.docx`!`section=heading`}}}}
 Inject the content of the section named `heading` including the section heading.
-### {{TEMPLATE!`filename.docx`!`section=heading`!`title=false`}}
+### {{{{TEMPLATE!`filename.docx`!`section=heading`!`title=false`}}}}
 Inject the content of the section named `heading` without the section heading if title is set to false.
-### {{TEMPLATE!`filename.docx`!`section=heading_start:heading_end`}}
+### {{{{TEMPLATE!`filename.docx`!`section=heading_start:heading_end`}}}}
 Inject the content of the sections from `heading_start` to `heading_end` including the section heading.
-### {{TEMPLATE!`filename.docx`!`section=heading_start:heading_end&title=false`}}
+### {{{{TEMPLATE!`filename.docx`!`section=heading_start:heading_end&title=false`}}}}
 Inject the content of the sections from `heading_start` to `heading_end` without the section heading if title is set to false.
 """
         return help_text 
@@ -1590,21 +1621,21 @@ Inject the content of the sections from `heading_start` to `heading_end` without
         Returns:
             A string with help information about available keywords.
         """
-        help_text = """
+        help_text = f"""
 # JSON Keywords
-If JSON keywords `{{JSON!...}}` are detected in the uploaded document, the application will look for the specified JSON file(s) `(ex: filename.json)` in the `json` folder. The system will first look for the file at the specified path, and if not found, it will check in the 'json' directory.
-### {{JSON!!`filename.json`}}
+If JSON keywords `{{{{JSON!...}}}}` are detected in the uploaded document, the application will look for the specified JSON file(s) `(ex: filename.json)` in the `{self.json_dir}` folder. The system will first look for the file at the specified path, and if not found, it will check in the '{self.json_dir}' directory.
+### {{{{JSON!!`filename.json`}}}}
 Inject the full JSON content. Note the double `!!` to indicate the full JSON content.
-### {{JSON!!`filename.json`!`$.`}}
+### {{{{JSON!!`filename.json`!`$.`}}}}
 Alternative syntax that also injects the full JSON content (the path `$.` refers to the root).
-### {{JSON!`filename.json`!`$.key`}}
-Inject the content of the JSON path `key`. Example: {{JSON!!launch.json!\$.configurations}}. Example: {{JSON!launch.json!$.configurations[0].name}}.
-### {{JSON!`filename.json`!`$.key`!`SUM`}}
-Sum the numeric values in the JSON path `key`. Example: {{JSON!sales.json!$.monthly_totals!SUM}}.   
-### {{JSON!`filename.json`!`$.key`!`JOIN(, )`}}
-Join the values in the JSON path `key` with a comma and space. Example: {{JSON!users.json!$.names!JOIN(, )}}.
-### {{JSON!`filename.json`!`$.key`!`BOOL(Yes/No)`}}
-Transform the boolean values in the JSON path `key` to custom text. Example: {{JSON!status.json!$.system_active!BOOL(Online/Offline)}}.
+### {{{{JSON!`filename.json`!`$.key`}}}}
+Inject the content of the JSON path `key`. Example: {{{{JSON!!launch.json!\\$.configurations}}}}. Example: {{{{JSON!launch.json!$.configurations[0].name}}}}.
+### {{{{JSON!`filename.json`!`$.key`!`SUM`}}}}
+Sum the numeric values in the JSON path `key`. Example: {{{{JSON!sales.json!$.monthly_totals!SUM}}}}.   
+### {{{{JSON!`filename.json`!`$.key`!`JOIN(, )`}}}}
+Join the values in the JSON path `key` with a comma and space. Example: {{{{JSON!users.json!$.names!JOIN(, )}}}}.
+### {{{{JSON!`filename.json`!`$.key`!`BOOL(Yes/No)`}}}}
+Transform the boolean values in the JSON path `key` to custom text. Example: {{{{JSON!status.json!$.system_active!BOOL(Online/Offline)}}}}.
 """
         return help_text 
 
@@ -1615,18 +1646,18 @@ Transform the boolean values in the JSON path `key` to custom text. Example: {{J
         Returns:
             A string with help information about available keywords.
         """
-        help_text = """
+        help_text = f"""
 # AI Keywords
-If AI keywords `{{AI!...}}` are detected in the uploaded document, the application will look for the specified document(s) in the `ai` folder or at the specified path. If the 'ai' folder does not exist, it will be created automatically.
+If AI keywords `{{{{AI!...}}}}` are detected in the uploaded document, the application will look for the specified document(s) in the `{self.ai_dir}` folder or at the specified path. If the '{self.ai_dir}' folder does not exist, it will be created automatically.
 
-### {{AI!`source-doc.docx`!`prompt_file.txt`!`words=100`}}
-Summarize the entire document located at 'ai/source-doc.docx'. The summary will be limited to 100 words or less. The prompt for the summary can be found in 'ai/prompt_file.txt'. If the prompt file does not have a .txt extension, the text specified is treated as the actual prompt.
+### {{{{AI!`source-doc.docx`!`prompt_file.txt`!`words=100`}}}}
+Summarize the entire document located at '{self.ai_dir}/source-doc.docx'. The summary will be limited to 100 words or less. The prompt for the summary can be found in '{self.ai_dir}/prompt_file.txt'. If the prompt file does not have a .txt extension, the text specified is treated as the actual prompt.
 
-### {{AI!`source-doc.docx`!`prompt_file.txt`!`section=section header&words=100`}}
-Summarize a section of the document identified by 'section header' in the document located at 'ai/source-doc.docx'. The summary will be limited to 100 words or less. The prompt for the summary can be found in 'ai/prompt_file.txt', or the text provided directly if not a .txt file.
+### {{{{AI!`source-doc.docx`!`prompt_file.txt`!`section=section header&words=100`}}}}
+Summarize a section of the document identified by 'section header' in the document located at '{self.ai_dir}/source-doc.docx'. The summary will be limited to 100 words or less. The prompt for the summary can be found in '{self.ai_dir}/prompt_file.txt', or the text provided directly if not a .txt file.
 
-### {{AI!`source-doc.docx`!`prompt_file.txt`!`section=Attractions:Unique Experiences&words=100`}}
-Summarize a range of content from 'Attractions' to 'Unique Experiences' in the document located at 'ai/source-doc.docx'. The summary will be limited to 100 words or less. The prompt for the summary can be found in 'ai/prompt_file.txt', or the text provided directly if not a .txt file.
+### {{{{AI!`source-doc.docx`!`prompt_file.txt`!`section=Attractions:Unique Experiences&words=100`}}}}
+Summarize a range of content from 'Attractions' to 'Unique Experiences' in the document located at '{self.ai_dir}/source-doc.docx'. The summary will be limited to 100 words or less. The prompt for the summary can be found in '{self.ai_dir}/prompt_file.txt', or the text provided directly if not a .txt file.
 
 The OpenAI API key should be stored in '.streamlit/secrets.toml' as 'openai_api_key'.
 """

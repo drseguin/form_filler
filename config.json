@@ -16,5 +16,10 @@
     "app": {
         "debug": false,
         "log_level": "info"
+    },
+    "paths": {
+        "templates": "templates",
+        "json": "json",
+        "ai": "ai"
     }
 } 
