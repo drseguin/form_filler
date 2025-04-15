@@ -40,7 +40,7 @@ If User Input keywords are detected in the uploaded document, the user will be p
 | Keyword Pattern | Description | Example |
 | :-------------- | :---------- | :------ |
 | `{{INPUT!TEXT!label!default_value}}` | Text input with label and default value | `{{INPUT!TEXT!Your Name!John Doe}}` |
-| `{{INPUT!AREA!label!default_value!height}}` | Multi-line text input with label, default value, and height | `{{INPUT!AREA!Comments!!200}}` |
+| `{{INPUT!AREA!label!default_value!height}}` | Multi-line text input with label, default value, and height | `{{INPUT!AREA!Comments!200}}` |
 | `{{INPUT!DATE!label!default_date!format}}` | Date input with label, default date, and format | `{{INPUT!DATE!Select Date!today!YYYY/MM/DD}}` |
 | `{{INPUT!SELECT!label!option1,option2,option3}}` | Dropdown selection with label and options | `{{INPUT!SELECT!Choose Color!Red,Green,Blue}}` |
 | `{{INPUT!CHECK!label!default_state}}` | Checkbox input with label and default state | `{{INPUT!CHECK!Agree to Terms!false}}` |
