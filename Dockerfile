@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Predownload spaCy model to avoid runtime downloads
+RUN python -m spacy download en_core_web_trf
+
 # Copy the application code
 COPY . .
 
