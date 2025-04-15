@@ -9,7 +9,15 @@
 
 ## Overview
 
-FORM Filler is a comprehensive document processing system that replaces keywords in Word documents with data from Excel spreadsheets, user inputs, JSON files, and templates. This system enables dynamic document generation with data-driven content and interactive user inputs, using `!` as the primary separator within keywords.
+FORM Filler is a comprehensive document processing system that dynamically replaces keywords in Word documents with content from multiple sources. The system supports five key keyword types:
+
+1. **User Input Keywords (`{{INPUT!...}}`)**: Create interactive form fields for gathering user input.
+2. **Excel Keywords (`{{XL!...}}`)**: Extract data from specific cells, ranges, or columns in Excel spreadsheets.
+3. **Template Keywords (`{{TEMPLATE!...}}`)**: Import content from other document templates.
+4. **JSON Keywords (`{{JSON!...}}`)**: Pull data from JSON files using JSONPath expressions.
+5. **AI Keywords (`{{AI!...}}`)**: Generate AI-powered summaries of documents or sections.
+
+This powerful templating system enables dynamic document generation with data-driven content and interactive user inputs, using `!` as the primary separator within keywords.
 
 The application provides a user-friendly Streamlit interface that guides users through a 5-step workflow:
 
@@ -25,9 +33,9 @@ All keywords use double curly braces (`{{}}`) as delimiters and the exclamation 
 
 ### User Input Keywords (`{{INPUT!...}}`)
 
-Keywords to create interactive input fields in Streamlit applications.
+These keywords create interactive input fields in the Streamlit application, allowing users to provide custom data for the document.
 
-If User Input keywords `{{INPUT!...}}` are detected in the uploaded document, the user will be prompted for input value(s) in Step 3.
+If User Input keywords are detected in the uploaded document, the user will be prompted for input value(s) in Step 3.
 
 | Keyword Pattern | Description | Example |
 | :-------------- | :---------- | :------ |
@@ -39,9 +47,9 @@ If User Input keywords `{{INPUT!...}}` are detected in the uploaded document, th
 
 ### Excel Keywords (`{{XL!...}}`)
 
-Keywords to fetch data from Excel files.
+These keywords extract data from Excel spreadsheets, supporting single cells, ranges, and formatted tables.
 
-If Excel keywords `{{XL!...}}` are detected in the uploaded document, the user will be prompted to upload the required Excel file(s) in Step 2.
+If Excel keywords are detected in the uploaded document, the user will be prompted to upload the required Excel file(s) in Step 2.
 
 | Keyword Pattern | Description | Example |
 | :-------------- | :---------- | :------ |
@@ -50,16 +58,16 @@ If Excel keywords `{{XL!...}}` are detected in the uploaded document, the user w
 | `{{XL!excel_file.xlsx!LAST!Cell}}` | Last non-empty value in column | `{{XL!budget.xlsx!LAST!A1}}` |
 | `{{XL!excel_file.xlsx!LAST!Sheet!Cell}}` | Last non-empty value in sheet column | `{{XL!budget.xlsx!LAST!Summary!A1}}` |
 | `{{XL!excel_file.xlsx!LAST!Sheet!Cell!Title}}` | Last non-empty value in titled column | `{{XL!budget.xlsx!LAST!Summary!A1!Total}}` |
-| `{{XL!excel_file.xlsx!RANGE!StartCell:EndCell}}` | Range of cells | `{{XL!budget.xlsx!RANGE!A1:G13}}` |
-| `{{XL!excel_file.xlsx!RANGE!Sheet!StartCell:EndCell}}` | Range from specific sheet | `{{XL!budget.xlsx!RANGE!Summary!A1:G13}}` |
-| `{{XL!excel_file.xlsx!COLUMN!Sheet!Cell1,Cell2,Cell3}}` | Multiple columns by cell references | `{{XL!budget.xlsx!COLUMN!Support!C4,E4,J4}}` |
-| `{{XL!excel_file.xlsx!COLUMN!Sheet!Title1,Title2,Title3!Row}}` | Multiple columns by titles | `{{XL!sales.xlsx!COLUMN!Distribution Plan!Unit,DHTC,Total!4}}` |
+| `{{XL!excel_file.xlsx!RANGE!StartCell:EndCell}}` | Range of cells as formatted table | `{{XL!budget.xlsx!RANGE!A1:G13}}` |
+| `{{XL!excel_file.xlsx!RANGE!Sheet!StartCell:EndCell}}` | Range from specific sheet as formatted table | `{{XL!budget.xlsx!RANGE!Summary!A1:G13}}` |
+| `{{XL!excel_file.xlsx!COLUMN!Sheet!Cell1,Cell2,Cell3}}` | Multiple columns by cell references as table | `{{XL!budget.xlsx!COLUMN!Support!C4,E4,J4}}` |
+| `{{XL!excel_file.xlsx!COLUMN!Sheet!Title1,Title2,Title3!Row}}` | Multiple columns by titles as table | `{{XL!sales.xlsx!COLUMN!Distribution Plan!Unit,DHTC,Total!4}}` |
 
 ### Template Keywords (`{{TEMPLATE!...}}`)
 
-Keywords to include content from other files or libraries.
+These keywords import content from other document templates, allowing for modular document construction.
 
-If Template keywords `{{TEMPLATE!...}}` are detected in the uploaded document, the application will look for the specified template file(s) in the `templates` folder.
+If Template keywords are detected in the uploaded document, the application will look for the specified template file(s) in the `templates` folder.
 
 | Keyword Pattern | Description | Example |
 | :-------------- | :---------- | :------ |
@@ -71,9 +79,9 @@ If Template keywords `{{TEMPLATE!...}}` are detected in the uploaded document, t
 
 ### JSON Keywords (`{{JSON!...}}`)
 
-Keywords to fetch data from JSON files using JSONPath.
+These keywords extract data from JSON files using JSONPath expressions, with additional formatting options.
 
-If JSON keywords `{{JSON!...}}` are detected in the uploaded document, the application will look for the specified JSON file(s) in the `json` folder or at the specified path.
+If JSON keywords are detected in the uploaded document, the application will look for the specified JSON file(s) in the `json` folder or at the specified path.
 
 | Keyword Pattern | Description | Example |
 | :-------------- | :---------- | :------ |
@@ -86,9 +94,9 @@ If JSON keywords `{{JSON!...}}` are detected in the uploaded document, the appli
 
 ### AI Keywords (`{{AI!...}}`)
 
-Keywords to generate AI-powered summaries of document content with intelligent formatting using spaCy.
+These keywords generate AI-powered summaries of document content with intelligent formatting using spaCy and OpenAI.
 
-If AI keywords `{{AI!...}}` are detected in the uploaded document, the application will look for the specified document(s) in the `ai` folder or at the specified path.
+If AI keywords are detected in the uploaded document, the application will look for the specified document(s) in the `ai` folder or at the specified path.
 
 | Keyword Pattern | Description | Example |
 | :-------------- | :---------- | :------ |
