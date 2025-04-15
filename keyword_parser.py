@@ -1652,8 +1652,15 @@ class keywordParser:
             except OSError:
                 # Download the model if it doesn't exist
                 self.logger.warning(f"spaCy model {model_name} not found. Attempting to download...")
+                
+                # Display a notification to the user about the download
+                download_message = st.warning(f"Downloading spaCy language model: {model_name}. This may take a few minutes depending on your internet connection and the model size...", icon="⏳")
+                
                 spacy.cli.download(model_name)
                 nlp = spacy.load(model_name)
+                
+                # Update the message once download is complete
+                download_message.success(f"Successfully downloaded and loaded spaCy model: {model_name}")
                 self.logger.info(f"Downloaded and loaded spaCy model: {model_name}")
             
             # Process the text with spaCy
