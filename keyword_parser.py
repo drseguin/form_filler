@@ -72,6 +72,18 @@ class keywordParser:
                     "templates": "templates",
                     "json": "json",
                     "ai": "ai"
+                },
+                "spacy": {
+                    "enabled": True,
+                    "model": "en_core_web_sm",
+                    "format_entities": True,
+                    "paragraph_breaks": True,
+                    "entity_styles": {
+                        "PERSON": {"bold": True},
+                        "ORG": {"bold": True, "underline": True},
+                        "DATE": {"italic": True},
+                        "MONEY": {"bold": True}
+                    }
                 }
             }
 
@@ -1503,6 +1515,14 @@ class keywordParser:
                     temperature=0.5
                 )
                 
+                # Check if spaCy formatting is enabled in the config
+                spacy_config = self.config.get("spacy", {})
+                spacy_enabled = spacy_config.get("enabled", False)
+                
+                # Apply spaCy formatting if enabled
+                if spacy_enabled and summary:
+                    return self._format_text_with_spacy(summary, spacy_config)
+                
                 return summary
                 
             except Exception as e:
@@ -1512,6 +1532,121 @@ class keywordParser:
         except Exception as e:
             self.logger.error(f"Error processing AI keyword: {str(e)}", exc_info=True)
             return f"[Error in AI: {str(e)}]"
+
+    def _format_text_with_spacy(self, text, spacy_config):
+        """
+        Format text using spaCy NLP features for better readability.
+        
+        Args:
+            text: Text to format
+            spacy_config: spaCy configuration parameters
+            
+        Returns:
+            Formatted text with improved structure and formatting
+        """
+        if not text:
+            return text
+            
+        try:
+            # Import spaCy
+            import spacy
+            from spacy.tokens import Doc
+            
+            # Get spaCy model name from config or use default
+            model_name = spacy_config.get("model", "en_core_web_sm")
+            
+            # Load spaCy model
+            try:
+                nlp = spacy.load(model_name)
+                self.logger.info(f"Loaded spaCy model: {model_name}")
+            except OSError:
+                # Download the model if it doesn't exist
+                self.logger.warning(f"spaCy model {model_name} not found. Attempting to download...")
+                spacy.cli.download(model_name)
+                nlp = spacy.load(model_name)
+                self.logger.info(f"Downloaded and loaded spaCy model: {model_name}")
+            
+            # Process the text with spaCy
+            doc = nlp(text)
+            
+            # Get formatting options from config
+            format_entities = spacy_config.get("format_entities", True)
+            paragraph_breaks = spacy_config.get("paragraph_breaks", True)
+            entity_styles = spacy_config.get("entity_styles", {})
+            
+            # If we're not using the word document (for preview), return a simpler format
+            if not self.word_document:
+                # Just apply basic formatting to improve text output
+                sentences = list(doc.sents)
+                result = []
+                
+                # Group sentences into paragraphs based on content
+                current_paragraph = []
+                for sent in sentences:
+                    sent_text = sent.text.strip()
+                    if not sent_text:
+                        continue
+                        
+                    # Start a new paragraph at meaningful breaks
+                    if (paragraph_breaks and 
+                        (len(current_paragraph) > 3 or  # Natural paragraph length
+                         sent.text.startswith("•") or    # Bullet points
+                         any(token.is_title for token in sent) or  # Likely a heading
+                         len(sent) < 5)):  # Very short sentence likely a title
+                        
+                        if current_paragraph:
+                            result.append(" ".join(current_paragraph))
+                            current_paragraph = []
+                    
+                    current_paragraph.append(sent_text)
+                
+                # Add the last paragraph
+                if current_paragraph:
+                    result.append(" ".join(current_paragraph))
+                    
+                return "\n\n".join(result)
+            
+            # For Word document, we can create rich text formatting
+            # We'll return formatted text that preserves entity information for the document
+            # This could be extended to create a proper Word document object with formatting
+            # if needed in the future
+            
+            # For now, we'll keep it simple and just improve paragraph structure
+            sentences = list(doc.sents)
+            result = []
+            
+            # Group sentences into paragraphs based on content
+            current_paragraph = []
+            for sent in sentences:
+                sent_text = sent.text.strip()
+                if not sent_text:
+                    continue
+                    
+                # Start a new paragraph at meaningful breaks
+                if (paragraph_breaks and 
+                    (len(current_paragraph) > 3 or  # Natural paragraph length
+                     sent.text.startswith("•") or    # Bullet points
+                     any(token.is_title for token in sent) or  # Likely a heading
+                     len(sent) < 5)):  # Very short sentence likely a title
+                    
+                    if current_paragraph:
+                        result.append(" ".join(current_paragraph))
+                        current_paragraph = []
+                
+                current_paragraph.append(sent_text)
+            
+            # Add the last paragraph
+            if current_paragraph:
+                result.append(" ".join(current_paragraph))
+                
+            return "\n\n".join(result)
+            
+        except ImportError:
+            self.logger.warning("spaCy library not available. Install with 'pip install spacy'")
+            return text
+        except Exception as e:
+            self.logger.error(f"Error formatting text with spaCy: {str(e)}", exc_info=True)
+            return text
 
     def reset_form_state(self):
         """Reset the form submission state and clear cached values."""

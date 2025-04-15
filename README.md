@@ -113,7 +113,7 @@ If JSON keywords `{{JSON!...}}` are detected in the uploaded document, the appli
 
 ##### AI Summary Keywords (`{{AI!...}}`)
 
-Keywords to generate AI-powered summaries of document content.
+Keywords to generate AI-powered summaries of document content with intelligent formatting using spaCy.
 
 If AI keywords `{{AI!...}}` are detected in the uploaded document, the application will look for the specified document(s) in the `ai` folder or at the specified path. If the 'ai' folder does not exist, it will be created automatically.
 
@@ -122,6 +122,12 @@ If AI keywords `{{AI!...}}` are detected in the uploaded document, the applicati
 | `{{AI!source-doc.docx!prompt_file.txt!words=100}}` | Summarize the entire document located at 'ai/source-doc.docx'. The summary will be limited to 100 words or less. The prompt for the summary can be found in 'ai/prompt_file.txt'. If the prompt file does not have a .txt extension, the text specified is treated as the actual prompt. | `{{AI!report.docx!Summarize this report!words=150}}` → *[150-word summary]* |
 | `{{AI!source-doc.docx!prompt_file.txt!section=section header&words=100}}` | Summarize a section of the document identified by 'section header' in the document located at 'ai/source-doc.docx'. The summary will be limited to 100 words or less. | `{{AI!contract.docx!Create a summary!section=Legal Terms&words=75}}` → *[75-word summary of the section]* |
 | `{{AI!source-doc.docx!prompt_file.txt!section=Attractions:Unique Experiences&words=100}}` | Summarize a range of content from 'Attractions' to 'Unique Experiences' in the document located at 'ai/source-doc.docx'. The summary will be limited to 100 words or less. | `{{AI!travel-guide.docx!concise highlights!section=History:Culture&words=100}}` → *[100-word summary of the range]* |
+
+AI summaries are intelligently formatted with spaCy natural language processing to improve readability:
+- Automatic paragraph breaks based on content structure
+- Proper formatting of sentences and sections
+- Recognition of bullet points and other structural elements
+- Configuration options in config.json for customizing the formatting
 
 The OpenAI API key should be stored in '.streamlit/secrets.toml' as 'openai_api_key'.
 
@@ -187,6 +193,28 @@ Start the tester app with:
 streamlit run tester_app.py
 ```
 
+## Setup and Installation
+
+1. Install the required Python packages:
+```bash
+pip install -r requirements.txt
+```
+
+2. Set up spaCy and download the required model:
+```bash
+python setup.py
+```
+
+3. Configure API keys in `.streamlit/secrets.toml`:
+```toml
+openai_api_key = "your-api-key-here"
+```
+
+4. Start the application:
+```bash
+streamlit run main.py
+```
+
 ## Usage Example
 
 ```python
@@ -211,6 +239,49 @@ Contact: {{INPUT!text!Contact Name:}}
 """
 # In a Streamlit app, this would generate a form first
 processed_report = parser.parse(report_template)
+
+# Using AI summary with spaCy formatting
+ai_template = """
+# Executive Summary
+{{AI!annual_report.docx!Summarize the key financial highlights in a professional tone!words=200}}
+"""
+# This will generate a nicely formatted summary using spaCy NLP processing
+```
+
+## Configuration
+
+The application can be configured through `config.json`. Key configuration options include:
+
+```json
+{
+  "llm": {
+    "provider": "openai",
+    "use_triton": false,
+    "settings": {
+      "openai": {
+        "model": "gpt-4o",
+        "temperature": 0.5
+      }
+    }
+  },
+  "spacy": {
+    "enabled": true,
+    "model": "en_core_web_sm",
+    "format_entities": true,
+    "paragraph_breaks": true,
+    "entity_styles": {
+      "PERSON": {"bold": true},
+      "ORG": {"bold": true, "underline": true},
+      "DATE": {"italic": true},
+      "MONEY": {"bold": true}
+    }
+  },
+  "paths": {
+    "templates": "templates",
+    "json": "json",
+    "ai": "ai"
+  }
+}
 ```
 
 ## Developer

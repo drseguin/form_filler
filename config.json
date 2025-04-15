@@ -21,5 +21,17 @@
         "templates": "templates",
         "json": "json",
         "ai": "ai"
+    },
+    "spacy": {
+        "enabled": true,
+        "model": "en_core_web_sm",
+        "format_entities": true,
+        "paragraph_breaks": true,
+        "entity_styles": {
+            "PERSON": {"bold": true},
+            "ORG": {"bold": true, "underline": true},
+            "DATE": {"italic": true},
+            "MONEY": {"bold": true}
+        }
     }
 } 
