@@ -13,6 +13,7 @@ from docx.oxml.ns import nsdecls
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from logs.logger_config import setup_logger
+from llm_factory import get_llm_client
 
 class keywordParser:
     """
@@ -1458,63 +1459,21 @@ class keywordParser:
                 # Use the prompt text directly
                 prompt_text = prompt_ref
             
-            # Read OpenAI API key from .streamlit/secrets.toml
-            api_key = None
-            secrets_path = os.path.join('.streamlit', 'secrets.toml')
-            if os.path.exists(secrets_path):
-                try:
-                    # Parse toml file manually since toml module might not be available
-                    with open(secrets_path, 'r', encoding='utf-8') as file:
-                        for line in file:
-                            if line.strip().startswith('openai_api_key'):
-                                parts = line.strip().split('=', 1)
-                                if len(parts) == 2:
-                                    api_key = parts[1].strip().strip('"\'')
-                                    break
-                except Exception as e:
-                    self.logger.error(f"Error reading secrets file: {str(e)}", exc_info=True)
-                    return f"[Error reading API key: {str(e)}]"
-            
-            if not api_key:
-                return "[OpenAI API key not found in .streamlit/secrets.toml]"
-            
-            # Call OpenAI API to generate summary
+            # Use the LLM client to generate the summary instead of calling OpenAI directly
             try:
-                from openai import OpenAI
+                # Get the LLM client (OpenAI or Triton based on config)
+                llm_client = get_llm_client()
                 
-                # Create client
-                client = OpenAI(api_key=api_key)
-                
-                # Create prompt with instructions
-                full_prompt = f"{prompt_text}\n\nText to summarize (keep under {words_limit} words):\n\n{document_text}"
-                
-                # Call OpenAI API
-                response = client.chat.completions.create(
-                    model="gpt-4o",  # Updated to use chat model
-                    messages=[
-                        {"role": "user", "content": full_prompt}
-                    ],
-                    max_tokens=words_limit * 2,  # Approximate token count
+                # Call the summarize method
+                summary = llm_client.summarize(
+                    text=document_text,
+                    prompt=prompt_text,
+                    max_words=words_limit,
                     temperature=0.5
                 )
                 
-                summary = response.choices[0].message.content.strip()
-                
-                # Count words and warn if exceeded
-                word_count = len(summary.split())
-                if word_count > words_limit:
-                    self.logger.warning(f"Summary exceeds word limit: {word_count} > {words_limit}")
-                    # Truncate to the word limit
-                    summary_words = summary.split()
-                    summary = " ".join(summary_words[:words_limit])
-                    summary += "..."
-                
                 return summary
-            
-            except ImportError:
-                self.logger.error("OpenAI library not available")
-                return "[Error: OpenAI library not available. Install with 'pip install openai>=1.0.0']"
-            
+                
             except Exception as e:
                 self.logger.error(f"Error generating summary: {str(e)}", exc_info=True)
                 return f"[Error generating summary: {str(e)}]"
