@@ -3,10 +3,11 @@ import os
 from pathlib import Path
 from typing import Dict, Optional, Union
 from logs.logger_config import setup_logger
+import streamlit as st
 
 
 class LLMClient(ABC):
-    """Base abstract class for LLM clients."""
+    """Abstract base class for LLM clients."""
 
     def __init__(self):
         self.logger = setup_logger('llm_client')
@@ -18,7 +19,7 @@ class LLMClient(ABC):
                   max_words: int = 100, 
                   temperature: float = 0.5) -> str:
         """
-        Summarize the given text using the LLM.
+        Summarize the given text using an LLM.
         
         Args:
             text: The text to summarize
@@ -52,16 +53,22 @@ class OpenAIClient(LLMClient):
         
     def get_api_key(self) -> Optional[str]:
         """
-        Get the OpenAI API key from .streamlit/secrets.toml
+        Get the OpenAI API key from session state or from .streamlit/secrets.toml
         
         Returns:
             The API key if available, None otherwise
         """
+        # First try to get the API key from session state
+        if 'openai_api_key' in st.session_state and st.session_state['openai_api_key']:
+            self.logger.info("Using OpenAI API key from session state")
+            return st.session_state['openai_api_key']
+        
+        # If not in session state, try to get from secrets.toml
         api_key = None
         secrets_path = Path(".streamlit/secrets.toml")
         
         if not secrets_path.exists():
-            self.logger.error("Secrets file not found: .streamlit/secrets.toml")
+            self.logger.warning("Secrets file not found: .streamlit/secrets.toml")
             return None
             
         try:
@@ -72,16 +79,17 @@ class OpenAIClient(LLMClient):
                         parts = line.strip().split('=', 1)
                         if len(parts) == 2:
                             api_key = parts[1].strip().strip('"\'')
-                            self.logger.info("OpenAI API key found")
-                            break
+                            if api_key:
+                                self.logger.info("OpenAI API key found in secrets.toml")
+                                # Also store in session state for future use
+                                st.session_state['openai_api_key'] = api_key
+                                return api_key
         except Exception as e:
             self.logger.error(f"Error reading secrets file: {str(e)}", exc_info=True)
             return None
             
-        if not api_key:
-            self.logger.warning("OpenAI API key not found in .streamlit/secrets.toml")
-            
-        return api_key
+        self.logger.warning("OpenAI API key not found in session state or secrets.toml")
+        return None
     
     def summarize(self, 
                   text: str, 

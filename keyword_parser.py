@@ -1908,7 +1908,7 @@ Summarize a section of the document identified by 'section header' in the docume
 ### {{{{AI!`source-doc.docx`!`prompt_file.txt`!`section=Attractions:Unique Experiences&words=100`}}}}
 Summarize a range of content from 'Attractions' to 'Unique Experiences' in the document located at '{self.ai_dir}/source-doc.docx'. The summary will be limited to 100 words or less. The prompt for the summary can be found in '{self.ai_dir}/prompt_file.txt', or the text provided directly if not a .txt file.
 
-The OpenAI API key should be stored in '.streamlit/secrets.toml' as 'openai_api_key'.
+An OpenAI API key is required for this feature and will be prompted when the application starts.
 """
         return help_text
 

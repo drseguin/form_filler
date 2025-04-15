@@ -10,9 +10,62 @@ from excel_manager import excelManager # Assuming excel_manager.py is in the sam
 from keyword_parser import keywordParser # Assuming keyword_parser.py is in the same directory
 from collections import Counter
 from logs.logger_config import setup_logger
+from pathlib import Path
 
 # Setup logger
 logger = setup_logger('main')
+
+def check_openai_api_key() -> bool:
+    """
+    Check if the OpenAI API key is set in the session state or in the .streamlit/secrets.toml file.
+    
+    Returns:
+        bool: True if the API key is set, False otherwise
+    """
+    # First check if API key is in session state
+    if 'openai_api_key' in st.session_state and st.session_state['openai_api_key']:
+        logger.info("OpenAI API key found in session state")
+        return True
+        
+    # If not in session state, check secrets.toml
+    secrets_path = Path(".streamlit/secrets.toml")
+    
+    if not secrets_path.exists():
+        logger.debug("Secrets file not found: .streamlit/secrets.toml")
+        return False
+        
+    try:
+        # Parse toml file manually
+        with open(secrets_path, 'r', encoding='utf-8') as file:
+            for line in file:
+                if line.strip().startswith('openai_api_key'):
+                    parts = line.strip().split('=', 1)
+                    if len(parts) == 2:
+                        api_key = parts[1].strip().strip('"\'')
+                        if api_key:
+                            logger.info("OpenAI API key found in secrets.toml")
+                            # Store in session state for future use
+                            st.session_state['openai_api_key'] = api_key
+                            return True
+                        else:
+                            logger.warning("OpenAI API key is empty in .streamlit/secrets.toml")
+                            return False
+    except Exception as e:
+        logger.error(f"Error reading secrets file: {str(e)}", exc_info=True)
+        return False
+    
+    logger.warning("OpenAI API key not found in session state or secrets.toml")
+    return False
+
+# Function to get the API key (for use in OpenAI client)
+def get_openai_api_key() -> str:
+    """
+    Get the OpenAI API key from session state or return empty string if not set.
+    
+    Returns:
+        str: The OpenAI API key or empty string
+    """
+    return st.session_state.get('openai_api_key', '')
 
 def preprocess_word_doc(doc_path):
     """
@@ -752,6 +805,34 @@ def main():
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
     
     logger.info("Application started")
+    
+    # Check for OpenAI API key at startup
+    if 'api_key_checked' not in st.session_state:
+        st.session_state['api_key_checked'] = False
+    
+    if not st.session_state['api_key_checked']:
+        api_key_set = check_openai_api_key()
+        
+        if not api_key_set:
+            st.warning("OpenAI API key is not set. Please enter your API key below.")
+            st.info("For security, your key will only be stored in this session and not saved to disk.")
+            api_key = st.text_input("OpenAI API Key", type="password", help="Your key will only be stored in memory for this session")
+            
+            if st.button("Use API Key"):
+                if api_key:
+                    # Store API key in session state only
+                    st.session_state['openai_api_key'] = api_key
+                    st.session_state['api_key_checked'] = True
+                    st.success("API key set for this session!")
+                    st.rerun()
+                else:
+                    st.error("Please enter a valid API key.")
+            
+            # Stop further execution until API key is provided
+            st.info("Please provide an OpenAI API key to continue.")
+            return
+        
+        st.session_state['api_key_checked'] = True
     
     # Initialize parser instance for help text display
     if 'keyword_parser_instance_for_help' not in st.session_state:
