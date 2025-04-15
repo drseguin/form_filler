@@ -35,27 +35,50 @@ def check_openai_api_key() -> bool:
         return False
         
     try:
-        # Parse toml file manually
+        # Try to read the entire file content and log it for debugging (without the full key)
+        with open(secrets_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+            if "openai_api_key" in content:
+                # Log a sanitized version of what we found (first 10 chars of key)
+                key_start = content.find("openai_api_key")
+                logger.info(f"Found openai_api_key entry in secrets.toml at position {key_start}")
+            else:
+                logger.warning("No openai_api_key entry found in secrets.toml content")
+                
+        # Now parse the file line by line to extract the key
         with open(secrets_path, 'r', encoding='utf-8') as file:
             for line in file:
-                if line.strip().startswith('openai_api_key'):
-                    parts = line.strip().split('=', 1)
+                line = line.strip()
+                if line.startswith('openai_api_key'):
+                    parts = line.split('=', 1)
                     if len(parts) == 2:
-                        api_key = parts[1].strip().strip('"\'')
+                        # Handle all possible quote formats: "" or ''
+                        api_key = parts[1].strip()
+                        
+                        # Remove quotes of any kind
+                        if (api_key.startswith('"') and api_key.endswith('"')) or \
+                           (api_key.startswith("'") and api_key.endswith("'")):
+                            api_key = api_key[1:-1]
+                        
                         if api_key:
-                            logger.info("OpenAI API key found in secrets.toml")
+                            # Store first and last 5 chars of the key for logging
+                            key_preview = f"{api_key[:5]}...{api_key[-5:]}" if len(api_key) > 10 else "..."
+                            logger.info(f"Found valid OpenAI API key in secrets.toml: {key_preview}")
+                            
                             # Store in session state for future use
                             st.session_state['openai_api_key'] = api_key
+                            st.session_state['api_key_valid'] = True  # Mark as valid since it came from secrets
                             return True
                         else:
                             logger.warning("OpenAI API key is empty in .streamlit/secrets.toml")
                             return False
+        
+        logger.warning("Could not find openai_api_key entry in secrets.toml")
+        return False
+        
     except Exception as e:
         logger.error(f"Error reading secrets file: {str(e)}", exc_info=True)
         return False
-    
-    logger.warning("OpenAI API key not found in session state or secrets.toml")
-    return False
 
 # Function to get the API key (for use in OpenAI client)
 def get_openai_api_key() -> str:
