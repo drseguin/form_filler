@@ -273,7 +273,8 @@ The application can be configured through `config.json`. Key configuration optio
       "PERSON": {"bold": true},
       "ORG": {"bold": true, "underline": true},
       "DATE": {"italic": true},
-      "MONEY": {"bold": true}
+      "MONEY": {"bold": true},
+      "PLACE": {"underline": true}
     }
   },
   "paths": {

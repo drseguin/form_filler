@@ -82,7 +82,8 @@ class keywordParser:
                         "PERSON": {"bold": True},
                         "ORG": {"bold": True, "underline": True},
                         "DATE": {"italic": True},
-                        "MONEY": {"bold": True}
+                        "MONEY": {"bold": True},
+                        "PLACE": {"underline": True}
                     }
                 }
             }
