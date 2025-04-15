@@ -38,11 +38,19 @@ def preprocess_word_doc(doc_path):
     }
     needs_excel = False
     needs_templates = False
+    needs_json = False
+    needs_ai = False
     total_keywords = 0
     excel_files = set()  # Store unique Excel files needed
     excel_files_not_found = []  # Store Excel files that were not found
     template_files = set()  # Store unique template files needed
     template_files_not_found = []  # Store template files that were not found
+    json_files = set()  # Store unique JSON files needed
+    json_files_not_found = []  # Store JSON files that were not found
+    ai_source_files = set()  # Store unique AI source files needed
+    ai_source_files_not_found = []  # Store AI source files that were not found
+    ai_prompt_files = set()  # Store unique AI prompt files needed
+    ai_prompt_files_not_found = []  # Store AI prompt files that were not found
 
     # Ensure excel directory exists
     excel_dir = "excel"
@@ -55,10 +63,24 @@ def preprocess_word_doc(doc_path):
     if not os.path.exists(templates_dir):
         os.makedirs(templates_dir)
         logger.info(f"Created templates directory: {templates_dir}")
+        
+    # Ensure json directory exists
+    json_dir = "json"
+    if not os.path.exists(json_dir):
+        os.makedirs(json_dir)
+        logger.info(f"Created json directory: {json_dir}")
+        
+    # Ensure ai directory exists
+    ai_dir = "ai"
+    if not os.path.exists(ai_dir):
+        os.makedirs(ai_dir)
+        logger.info(f"Created ai directory: {ai_dir}")
 
     def categorize_keyword(content):
         nonlocal needs_excel
         nonlocal needs_templates
+        nonlocal needs_json
+        nonlocal needs_ai
         parts = content.split("!", 1) # Use '!' separator
         keyword_type = parts[0].strip().upper()
 
@@ -175,9 +197,64 @@ def preprocess_word_doc(doc_path):
                 logger.info(f"Categorizing as FULL template (default): {content}")
                 keywords["template"]["full"].append(content)
         elif keyword_type == "JSON":
+            needs_json = True
             keywords["json"].append(content)
+            
+            if len(parts) > 1:
+                # Extract the JSON file name
+                json_parts = parts[1].split("!", 1)
+                json_file = json_parts[0].strip()
+                
+                # Handle special case where the first part might be empty ({{JSON!!filename.json}})
+                if not json_file and len(json_parts) > 1:
+                    # In this case, the second part is the filename
+                    json_file = json_parts[1].split("!", 1)[0].strip()
+                
+                # If the json_file looks like a file path ending with .json
+                if json_file.lower().endswith('.json'):
+                    json_files.add(json_file)  # Add to set of required JSON files
+                    
+                    # Check if file exists in current path or json folder
+                    file_exists = os.path.exists(json_file) or os.path.exists(os.path.join(json_dir, json_file))
+                    
+                    if not file_exists and json_file not in json_files_not_found:
+                        json_files_not_found.append(json_file)
+                        logger.info(f"JSON file not found: {json_file}")
+            
         elif keyword_type == "AI":
+            needs_ai = True
             keywords["ai"].append(content)
+            
+            if len(parts) > 1:
+                # Extract the AI source document and prompt files
+                ai_parts = parts[1].split("!")
+                
+                # First part is always the source document
+                if len(ai_parts) >= 1:
+                    source_file = ai_parts[0].strip()
+                    if source_file.lower().endswith(('.docx', '.txt')):
+                        ai_source_files.add(source_file)
+                        
+                        # Check if file exists in current path or ai folder
+                        file_exists = os.path.exists(source_file) or os.path.exists(os.path.join(ai_dir, source_file))
+                        
+                        if not file_exists and source_file not in ai_source_files_not_found:
+                            ai_source_files_not_found.append(source_file)
+                            logger.info(f"AI source file not found: {source_file}")
+                
+                # Second part could be a prompt file or a literal prompt
+                if len(ai_parts) >= 2:
+                    prompt = ai_parts[1].strip()
+                    # Only treat as a file if it ends with .txt
+                    if prompt.lower().endswith('.txt'):
+                        ai_prompt_files.add(prompt)
+                        
+                        # Check if file exists in current path or ai folder
+                        file_exists = os.path.exists(prompt) or os.path.exists(os.path.join(ai_dir, prompt))
+                        
+                        if not file_exists and prompt not in ai_prompt_files_not_found:
+                            ai_prompt_files_not_found.append(prompt)
+                            logger.info(f"AI prompt file not found: {prompt}")
         else:
              # If not a recognized type, check if it might be an Excel named range
              if '!' not in content and ':' not in content:
@@ -214,10 +291,18 @@ def preprocess_word_doc(doc_path):
         "other_count": len(keywords["other"]),
         "needs_excel": needs_excel,
         "needs_templates": needs_templates,
+        "needs_json": needs_json,
+        "needs_ai": needs_ai,
         "excel_files": list(excel_files),
         "excel_files_not_found": excel_files_not_found,
         "template_files": list(template_files),
         "template_files_not_found": template_files_not_found,
+        "json_files": list(json_files),
+        "json_files_not_found": json_files_not_found,
+        "ai_source_files": list(ai_source_files),
+        "ai_source_files_not_found": ai_source_files_not_found,
+        "ai_prompt_files": list(ai_prompt_files),
+        "ai_prompt_files_not_found": ai_prompt_files_not_found,
         "keywords": keywords
     }
     
@@ -239,6 +324,22 @@ def preprocess_word_doc(doc_path):
         logger.info(f"Template files needed: {list(template_files)}")
     if template_files_not_found:
         logger.info(f"Template files not found: {template_files_not_found}")
+        
+    # Debug log for JSON files
+    if json_files:
+        logger.info(f"JSON files needed: {list(json_files)}")
+    if json_files_not_found:
+        logger.info(f"JSON files not found: {json_files_not_found}")
+        
+    # Debug log for AI files
+    if ai_source_files:
+        logger.info(f"AI source files needed: {list(ai_source_files)}")
+    if ai_source_files_not_found:
+        logger.info(f"AI source files not found: {ai_source_files_not_found}")
+    if ai_prompt_files:
+        logger.info(f"AI prompt files needed: {list(ai_prompt_files)}")
+    if ai_prompt_files_not_found:
+        logger.info(f"AI prompt files not found: {ai_prompt_files_not_found}")
     
     return summary
 
@@ -569,6 +670,23 @@ def display_keyword_summary(summary):
             st.write(f"Total: {total_inputs}")
             for input_type, count in summary["input_counts"].items():
                  if count > 0: st.write(f"- {input_type}: {count}")
+                 
+            st.markdown("**JSON Keywords (`JSON!`)**")
+            st.write(f"Total: {summary['json_count']}")
+            
+            # Show JSON files
+            if summary.get("needs_json") and "json_files" in summary and summary["json_files"]:
+                st.write("**JSON Files Referenced:**")
+                for json_file in summary["json_files"]:
+                    if "json_files_not_found" in summary and json_file in summary["json_files_not_found"]:
+                        st.write(f"- {json_file} (not found)")
+                    else:
+                        st.write(f"- {json_file}")
+            
+            if summary['json_count'] > 0 and 'keywords' in summary and summary['keywords']['json']:
+                st.caption("Examples:")
+                for item in summary['keywords']['json'][:2]:  # Show first 2
+                    st.caption(f"- `{{{{{item}}}}}`")
 
         with col2:
             # Enhanced Template section with more details
@@ -590,15 +708,27 @@ def display_keyword_summary(summary):
                     # Just show the uppercase name and count
                     st.write(f"- {template_type.upper()}: {count}")
             
-            st.markdown("**JSON Keywords (`JSON!`)**")
-            st.write(f"Total: {summary['json_count']}")
-            if summary['json_count'] > 0 and 'keywords' in summary and summary['keywords']['json']:
-                st.caption("Examples:")
-                for item in summary['keywords']['json'][:2]:  # Show first 2
-                    st.caption(f"- `{{{{{item}}}}}`")
-            
             st.markdown("**AI Keywords (`AI!`)**")
             st.write(f"Total: {summary['ai_count']}")
+            
+            # Show AI files
+            if summary.get("needs_ai"):
+                if "ai_source_files" in summary and summary["ai_source_files"]:
+                    st.write("**AI Source Files Referenced:**")
+                    for ai_file in summary["ai_source_files"]:
+                        if "ai_source_files_not_found" in summary and ai_file in summary["ai_source_files_not_found"]:
+                            st.write(f"- {ai_file} (not found)")
+                        else:
+                            st.write(f"- {ai_file}")
+                            
+                if "ai_prompt_files" in summary and summary["ai_prompt_files"]:
+                    st.write("**AI Prompt Files Referenced:**")
+                    for prompt_file in summary["ai_prompt_files"]:
+                        if "ai_prompt_files_not_found" in summary and prompt_file in summary["ai_prompt_files_not_found"]:
+                            st.write(f"- {prompt_file} (not found)")
+                        else:
+                            st.write(f"- {prompt_file}")
+            
             if summary['ai_count'] > 0 and 'keywords' in summary and summary['keywords']['ai']:
                 st.caption("Examples:")
                 for item in summary['keywords']['ai'][:2]:  # Show first 2
@@ -631,8 +761,12 @@ def main():
         'excel_uploaded': False, 'excel_path': None, 'excel_manager_instance': None,
         'excel_files_uploaded': {}, 'excel_managers': {},  # New state for multiple Excel files
         'templates_uploaded': False, 'template_files_uploaded': {}, # New state for templates
+        'json_uploaded': False, 'json_files_uploaded': {}, # New state for JSON files
+        'ai_uploaded': False, 'ai_source_files_uploaded': {}, 'ai_prompt_files_uploaded': {}, # New state for AI files
         'rerun_triggered_after_upload': False, 'rerun_triggered_for_found_files': False,  # Flags to prevent infinite reruns
         'rerun_triggered_after_template_upload': False, 'rerun_triggered_for_found_templates': False,  # Template flags
+        'rerun_triggered_after_json_upload': False, 'rerun_triggered_for_found_json': False,  # JSON flags
+        'rerun_triggered_after_ai_upload': False, 'rerun_triggered_for_found_ai': False,  # AI flags
         'keyword_parser_instance': None, 'form_submitted_main': False, 'input_values_main': {},
         'processing_started': False, 'processed_doc_path': None, 'processed_count': 0
     }
@@ -684,9 +818,15 @@ def main():
         elif st.session_state.current_step == 2:
             needs_excel = st.session_state.analysis_summary and st.session_state.analysis_summary.get("needs_excel", False)
             needs_templates = st.session_state.analysis_summary and st.session_state.analysis_summary.get("needs_templates", False)
+            needs_json = st.session_state.analysis_summary and st.session_state.analysis_summary.get("needs_json", False)
+            needs_ai = st.session_state.analysis_summary and st.session_state.analysis_summary.get("needs_ai", False)
+            
             excel_ready = (not needs_excel) or st.session_state.excel_uploaded
             templates_ready = (not needs_templates) or st.session_state.templates_uploaded
-            can_proceed = excel_ready and templates_ready
+            json_ready = (not needs_json) or st.session_state.json_uploaded
+            ai_ready = (not needs_ai) or st.session_state.ai_uploaded
+            
+            can_proceed = excel_ready and templates_ready and json_ready and ai_ready
         elif st.session_state.current_step == 3:
             has_inputs = st.session_state.analysis_summary and sum(st.session_state.analysis_summary['input_counts'].values()) > 0
             can_proceed = (not has_inputs) or st.session_state.form_submitted_main
@@ -751,11 +891,27 @@ def main():
                 st.session_state.template_files_uploaded = {}
             st.session_state.templates_uploaded = False
                 
+            # Clear JSON-related state
+            if 'json_files_uploaded' in st.session_state:
+                st.session_state.json_files_uploaded = {}
+            st.session_state.json_uploaded = False
+                
+            # Clear AI-related state
+            if 'ai_source_files_uploaded' in st.session_state:
+                st.session_state.ai_source_files_uploaded = {}
+            if 'ai_prompt_files_uploaded' in st.session_state:
+                st.session_state.ai_prompt_files_uploaded = {}
+            st.session_state.ai_uploaded = False
+                
             # Reset rerun flags
             st.session_state.rerun_triggered_after_upload = False
             st.session_state.rerun_triggered_for_found_files = False
             st.session_state.rerun_triggered_after_template_upload = False
             st.session_state.rerun_triggered_for_found_templates = False
+            st.session_state.rerun_triggered_after_json_upload = False
+            st.session_state.rerun_triggered_for_found_json = False
+            st.session_state.rerun_triggered_after_ai_upload = False
+            st.session_state.rerun_triggered_for_found_ai = False
                 
             st.rerun()
     
@@ -977,6 +1133,181 @@ def main():
                     # Only rerun if this is the first time we're setting the flag for found templates
                     if not st.session_state.get('rerun_triggered_for_found_templates', False):
                         st.session_state.rerun_triggered_for_found_templates = True
+                        st.rerun()
+            
+            # Check if JSON files are needed
+            needs_json = st.session_state.analysis_summary.get("needs_json", False)
+            
+            if needs_json and "json_files" in st.session_state.analysis_summary:
+                json_files = st.session_state.analysis_summary["json_files"]
+                json_files_not_found = st.session_state.analysis_summary.get("json_files_not_found", [])
+                
+                if json_files_not_found:
+                    st.write("### JSON Files Required")
+                    st.write("The following JSON files were specified in the document but not found. Please upload them:")
+                    
+                    for json_file in json_files_not_found:
+                        # Check if this file has already been uploaded
+                        if json_file in st.session_state.json_files_uploaded:
+                            st.success(f"✅ {json_file} has been uploaded.")
+                            continue
+                            
+                        st.write(f"**{json_file}**")
+                        json_upload_key = f"json_uploader_{json_file}"
+                        
+                        # Create uploader for this file
+                        uploaded_file = st.file_uploader(f"Upload {json_file}", 
+                                                       type=["json"], key=json_upload_key)
+                        
+                        if uploaded_file:
+                            # Save the uploaded file to the json directory with the exact filename specified
+                            json_dir = "json"
+                            save_path = os.path.join(json_dir, json_file)
+                            
+                            with open(save_path, "wb") as f:
+                                f.write(uploaded_file.getbuffer())
+                            
+                            st.success(f"Saved {json_file} to json folder")
+                            logger.info(f"Saved uploaded JSON file to {save_path}")
+                            
+                            # Mark JSON as uploaded
+                            st.session_state.json_files_uploaded[json_file] = True
+                            st.rerun()  # Refresh to update the UI
+                    
+                    # Check if all required JSON files have been uploaded
+                    all_json_uploaded = all(json_file in st.session_state.json_files_uploaded 
+                                           for json_file in json_files_not_found)
+                    
+                    if all_json_uploaded:
+                        st.success("All required JSON files have been uploaded!")
+                        st.session_state.json_uploaded = True
+                        # Only rerun if this is the first time we're setting the flag
+                        if not st.session_state.get('rerun_triggered_after_json_upload', False):
+                            st.session_state.rerun_triggered_after_json_upload = True
+                            st.rerun()
+                    else:
+                        st.session_state.json_uploaded = False
+                else:
+                    # All JSON files were found
+                    st.success("All JSON files specified in the document have been found in the json folder.")
+                    st.session_state.json_uploaded = True
+                    
+                    # Only rerun if this is the first time we're setting the flag for found JSON
+                    if not st.session_state.get('rerun_triggered_for_found_json', False):
+                        st.session_state.rerun_triggered_for_found_json = True
+                        st.rerun()
+            
+            # Check if AI files are needed
+            needs_ai = st.session_state.analysis_summary.get("needs_ai", False)
+            
+            if needs_ai:
+                # Handle AI source files
+                ai_source_files = st.session_state.analysis_summary.get("ai_source_files", [])
+                ai_source_files_not_found = st.session_state.analysis_summary.get("ai_source_files_not_found", [])
+                
+                if ai_source_files_not_found:
+                    st.write("### AI Source Files Required")
+                    st.write("The following AI source files were specified in the document but not found. Please upload them:")
+                    
+                    for ai_file in ai_source_files_not_found:
+                        # Check if this file has already been uploaded
+                        if ai_file in st.session_state.ai_source_files_uploaded:
+                            st.success(f"✅ {ai_file} has been uploaded.")
+                            continue
+                            
+                        st.write(f"**{ai_file}**")
+                        ai_upload_key = f"ai_source_uploader_{ai_file}"
+                        
+                        # Determine file type based on extension
+                        file_ext = ai_file.split('.')[-1].lower() if '.' in ai_file else 'docx'
+                        allowed_types = ["docx", "txt"] if file_ext in ["docx", "txt"] else ["docx", "txt", file_ext]
+                        
+                        # Create uploader for this file
+                        uploaded_file = st.file_uploader(f"Upload {ai_file}", 
+                                                       type=allowed_types, key=ai_upload_key)
+                        
+                        if uploaded_file:
+                            # Save the uploaded file to the ai directory with the exact filename specified
+                            ai_dir = "ai"
+                            save_path = os.path.join(ai_dir, ai_file)
+                            
+                            with open(save_path, "wb") as f:
+                                f.write(uploaded_file.getbuffer())
+                            
+                            st.success(f"Saved {ai_file} to ai folder")
+                            logger.info(f"Saved uploaded AI source file to {save_path}")
+                            
+                            # Mark AI source file as uploaded
+                            st.session_state.ai_source_files_uploaded[ai_file] = True
+                            st.rerun()  # Refresh to update the UI
+                
+                # Handle AI prompt files
+                ai_prompt_files = st.session_state.analysis_summary.get("ai_prompt_files", [])
+                ai_prompt_files_not_found = st.session_state.analysis_summary.get("ai_prompt_files_not_found", [])
+                
+                if ai_prompt_files_not_found:
+                    st.write("### AI Prompt Files Required")
+                    st.write("The following AI prompt files were specified in the document but not found. Please upload them:")
+                    
+                    for prompt_file in ai_prompt_files_not_found:
+                        # Check if this file has already been uploaded
+                        if prompt_file in st.session_state.ai_prompt_files_uploaded:
+                            st.success(f"✅ {prompt_file} has been uploaded.")
+                            continue
+                            
+                        st.write(f"**{prompt_file}**")
+                        prompt_upload_key = f"ai_prompt_uploader_{prompt_file}"
+                        
+                        # Create uploader for this file
+                        uploaded_file = st.file_uploader(f"Upload {prompt_file}", 
+                                                       type=["txt"], key=prompt_upload_key)
+                        
+                        if uploaded_file:
+                            # Save the uploaded file to the ai directory with the exact filename specified
+                            ai_dir = "ai"
+                            save_path = os.path.join(ai_dir, prompt_file)
+                            
+                            with open(save_path, "wb") as f:
+                                f.write(uploaded_file.getbuffer())
+                            
+                            st.success(f"Saved {prompt_file} to ai folder")
+                            logger.info(f"Saved uploaded AI prompt file to {save_path}")
+                            
+                            # Mark AI prompt file as uploaded
+                            st.session_state.ai_prompt_files_uploaded[prompt_file] = True
+                            st.rerun()  # Refresh to update the UI
+                
+                # Check if all required AI files have been uploaded
+                all_ai_source_uploaded = all(ai_file in st.session_state.ai_source_files_uploaded 
+                                          for ai_file in ai_source_files_not_found)
+                all_ai_prompt_uploaded = all(prompt_file in st.session_state.ai_prompt_files_uploaded 
+                                          for prompt_file in ai_prompt_files_not_found)
+                
+                if all_ai_source_uploaded and all_ai_prompt_uploaded:
+                    st.success("All required AI files have been uploaded!")
+                    st.session_state.ai_uploaded = True
+                    # Only rerun if this is the first time we're setting the flag
+                    if not st.session_state.get('rerun_triggered_after_ai_upload', False):
+                        st.session_state.rerun_triggered_after_ai_upload = True
+                        st.rerun()
+                else:
+                    st.session_state.ai_uploaded = False
+                    # Show status of what's still missing
+                    if ai_source_files_not_found and not all_ai_source_uploaded:
+                        missing_source = [f for f in ai_source_files_not_found if f not in st.session_state.ai_source_files_uploaded]
+                        st.info(f"Still waiting for AI source files: {', '.join(missing_source)}")
+                    if ai_prompt_files_not_found and not all_ai_prompt_uploaded:
+                        missing_prompts = [f for f in ai_prompt_files_not_found if f not in st.session_state.ai_prompt_files_uploaded]
+                        st.info(f"Still waiting for AI prompt files: {', '.join(missing_prompts)}")
+                
+                # If no missing files were found but we need AI
+                if not ai_source_files_not_found and not ai_prompt_files_not_found and ai_source_files:
+                    st.success("All AI files specified in the document have been found in the ai folder.")
+                    st.session_state.ai_uploaded = True
+                    
+                    # Only rerun if this is the first time we're setting the flag for found AI
+                    if not st.session_state.get('rerun_triggered_for_found_ai', False):
+                        st.session_state.rerun_triggered_for_found_ai = True
                         st.rerun()
             
             # Initialize Excel Manager for old format
