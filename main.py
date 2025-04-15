@@ -440,7 +440,7 @@ def process_word_doc(doc_path, excel_path=None, parser=None):
             current_keyword = keywords_in_this_para[0] if keywords_in_this_para else "Unknown"
             
             # Update progress text to show current keyword
-            progress_text.text(f"Processing: {processed_keywords_count}/{total_keywords_initial} keywords | Current: {{{{{current_keyword}}}}}")
+            progress_text.text(f"{processed_keywords_count}/{total_keywords_initial} - {{{{{current_keyword}}}}}")
             
             try:
                 # parser.parse will handle replacements, including potential table creation
