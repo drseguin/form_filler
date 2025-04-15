@@ -117,17 +117,12 @@ AI summaries are intelligently formatted with spaCy natural language processing 
 pip install -r requirements.txt
 ```
 
-2. Set up spaCy and download the required model:
-```bash
-python setup.py
-```
-
-3. Configure API keys in `.streamlit/secrets.toml`:
+2. Configure API keys in `.streamlit/secrets.toml`:
 ```toml
 openai_api_key = "your-api-key-here"
 ```
 
-4. Start the application:
+3. Start the application:
 ```bash
 streamlit run main.py
 ```
