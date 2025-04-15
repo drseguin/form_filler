@@ -33,6 +33,7 @@ def preprocess_word_doc(doc_path):
         "input": {"text": [], "area": [], "date": [], "select": [], "check": []},
         "template": {"full": [], "section": [], "range": []},
         "json": [],
+        "ai": [],
         "other": []
     }
     needs_excel = False
@@ -115,6 +116,8 @@ def preprocess_word_doc(doc_path):
                 keywords["template"]["full"].append(content)
         elif keyword_type == "JSON":
             keywords["json"].append(content)
+        elif keyword_type == "AI":
+            keywords["ai"].append(content)
         else:
              # If not a recognized type, check if it might be an Excel named range
              if '!' not in content and ':' not in content:
@@ -147,6 +150,7 @@ def preprocess_word_doc(doc_path):
         "template_count": {k: len(v) for k, v in keywords["template"].items()},
         "template_total": sum(len(v) for v in keywords["template"].values()),
         "json_count": len(keywords["json"]),
+        "ai_count": len(keywords["ai"]),
         "other_count": len(keywords["other"]),
         "needs_excel": needs_excel,
         "keywords": keywords
@@ -483,6 +487,13 @@ def display_keyword_summary(summary):
             if summary['json_count'] > 0 and 'keywords' in summary and summary['keywords']['json']:
                 st.caption("Examples:")
                 for item in summary['keywords']['json'][:2]:  # Show first 2
+                    st.caption(f"- `{{{{{item}}}}}`")
+            
+            st.markdown("**AI Keywords (`AI!`)**")
+            st.write(f"Total: {summary['ai_count']}")
+            if summary['ai_count'] > 0 and 'keywords' in summary and summary['keywords']['ai']:
+                st.caption("Examples:")
+                for item in summary['keywords']['ai'][:2]:  # Show first 2
                     st.caption(f"- `{{{{{item}}}}}`")
             
             st.markdown("**Other/Invalid**")
