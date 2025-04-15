@@ -68,39 +68,108 @@ st.title("Excel Manager App")
 
 logger.info("Tester application started")
 
-# Check for OpenAI API key at startup
-if 'api_key_checked' not in st.session_state:
-    st.session_state['api_key_checked'] = False
-
-if not st.session_state['api_key_checked']:
-    api_key_set = check_openai_api_key()
-    
-    if not api_key_set:
-        st.warning("OpenAI API key is not set. Please enter your API key below.")
-        st.info("For security, your key will only be stored in this session and not saved to disk.")
-        api_key = st.text_input("OpenAI API Key", type="password", help="Your key will only be stored in memory for this session")
-        
-        if st.button("Use API Key"):
-            if api_key:
-                # Store API key in session state only
-                st.session_state['openai_api_key'] = api_key
-                st.session_state['api_key_checked'] = True
-                st.success("API key set for this session!")
-                st.rerun()
-            else:
-                st.error("Please enter a valid API key.")
-        
-        # Stop further execution until API key is provided
-        st.info("Please provide an OpenAI API key to continue.")
-        st.stop()
-    
-    st.session_state['api_key_checked'] = True
+# Initialize session state for API key validation
+if 'api_key_valid' not in st.session_state:
+    st.session_state['api_key_valid'] = False
 
 # Load custom CSS
 with open('style.css') as f:
     st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
-# Initialize session state
+# Sidebar for file operations
+with st.sidebar:
+    st.header("File Operations")
+    
+    # Only show file operations if API key is valid
+    if st.session_state.get('api_key_valid', False):
+        # File upload
+        uploaded_file = st.file_uploader("Upload Excel file", type=["xlsx", "xls"])
+        if uploaded_file is not None:
+            # Save uploaded file to temp directory
+            file_path = os.path.join(st.session_state.temp_dir, uploaded_file.name)
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            
+            logger.info(f"Uploaded file saved to {file_path}")
+            
+            # Initialize ExcelManager with the uploaded file
+            st.session_state.excel_manager = excelManager(file_path)
+            st.session_state.keyword_parser = keywordParser(st.session_state.excel_manager)
+            st.session_state.file_path = file_path
+            st.sidebar.success(f"Loaded: {uploaded_file.name}")
+            logger.info(f"Excel manager initialized with {uploaded_file.name}")
+
+        # Create new file
+        new_file_name = st.text_input("Or create a new file (name.xlsx):")
+        if st.button("Create New File") and new_file_name:
+            if not new_file_name.endswith(('.xlsx', '.xls')):
+                new_file_name += '.xlsx'
+            
+            file_path = os.path.join(st.session_state.temp_dir, new_file_name)
+            logger.info(f"Creating new Excel file at {file_path}")
+            st.session_state.excel_manager = excelManager()
+            st.session_state.excel_manager.create_workbook(file_path)
+            st.session_state.keyword_parser = keywordParser(st.session_state.excel_manager)
+            st.session_state.file_path = file_path
+            st.sidebar.success(f"Created: {new_file_name}")
+            logger.info(f"Created new Excel file: {new_file_name}")
+
+        # Reset app
+        if st.button("Reset"):
+            logger.info("Resetting tester application")
+            reset_app()
+            st.sidebar.success("Reset complete")
+            logger.info("Reset complete")
+
+# Main content area - first check the API key
+# Check for OpenAI API key before showing app content
+api_key_set = check_openai_api_key()
+
+if not api_key_set or not st.session_state.get('api_key_valid', False):
+    st.header("OpenAI API Key Required")
+    st.warning("An OpenAI API key is required to use AI features in this application.")
+    st.info("For security, your key will only be stored in this session and not saved to disk.")
+    
+    with st.form("api_key_form"):
+        api_key = st.text_input("OpenAI API Key", type="password", 
+                                help="Your key will only be stored in memory for this session")
+        submitted = st.form_submit_button("Validate and Save API Key")
+        
+        if submitted:
+            if api_key:
+                # Store API key in session state
+                st.session_state['openai_api_key'] = api_key
+                
+                # Validate the API key by trying to use it
+                try:
+                    from openai import OpenAI
+                    
+                    # Create client with the provided API key
+                    client = OpenAI(api_key=api_key)
+                    
+                    # Simple validation request
+                    response = client.chat.completions.create(
+                        model="gpt-3.5-turbo",
+                        messages=[{"role": "user", "content": "Hello"}],
+                        max_tokens=5
+                    )
+                    
+                    # If we get here, the API key is valid
+                    st.session_state['api_key_valid'] = True
+                    st.success("API key validated and saved for this session!")
+                    logger.info("API key validated successfully")
+                    st.rerun()
+                except Exception as e:
+                    logger.error(f"Error validating API key: {str(e)}")
+                    st.error(f"Invalid API key. Please check your key and try again. Error: {str(e)}")
+                    st.session_state['api_key_valid'] = False
+            else:
+                st.error("Please enter a valid API key.")
+    
+    # Stop further execution until a valid API key is provided
+    st.stop()
+
+# Initialize session state (only if API key is valid)
 if 'excel_manager' not in st.session_state:
     st.session_state.excel_manager = None
 if 'keyword_parser' not in st.session_state:
@@ -115,48 +184,6 @@ def reset_app():
     st.session_state.excel_manager = None
     st.session_state.keyword_parser = None
     st.session_state.file_path = None
-
-# Sidebar for file operations
-st.sidebar.header("File Operations")
-
-# File upload
-uploaded_file = st.sidebar.file_uploader("Upload Excel file", type=["xlsx", "xls"])
-if uploaded_file is not None:
-    # Save uploaded file to temp directory
-    file_path = os.path.join(st.session_state.temp_dir, uploaded_file.name)
-    with open(file_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
-    
-    logger.info(f"Uploaded file saved to {file_path}")
-    
-    # Initialize ExcelManager with the uploaded file
-    st.session_state.excel_manager = excelManager(file_path)
-    st.session_state.keyword_parser = keywordParser(st.session_state.excel_manager)
-    st.session_state.file_path = file_path
-    st.sidebar.success(f"Loaded: {uploaded_file.name}")
-    logger.info(f"Excel manager initialized with {uploaded_file.name}")
-
-# Create new file
-new_file_name = st.sidebar.text_input("Or create a new file (name.xlsx):")
-if st.sidebar.button("Create New File") and new_file_name:
-    if not new_file_name.endswith(('.xlsx', '.xls')):
-        new_file_name += '.xlsx'
-    
-    file_path = os.path.join(st.session_state.temp_dir, new_file_name)
-    logger.info(f"Creating new Excel file at {file_path}")
-    st.session_state.excel_manager = excelManager()
-    st.session_state.excel_manager.create_workbook(file_path)
-    st.session_state.keyword_parser = keywordParser(st.session_state.excel_manager)
-    st.session_state.file_path = file_path
-    st.sidebar.success(f"Created: {new_file_name}")
-    logger.info(f"Created new Excel file: {new_file_name}")
-
-# Reset app
-if st.sidebar.button("Reset"):
-    logger.info("Resetting tester application")
-    reset_app()
-    st.sidebar.success("Reset complete")
-    logger.info("Reset complete")
 
 # Main content
 if st.session_state.excel_manager is not None:

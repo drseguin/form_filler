@@ -184,3 +184,4 @@ logs/*.log
 !logs/logger_config.py
 !templates/
 .DS_Store
+.streamlit/secrets.toml
