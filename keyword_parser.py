@@ -22,16 +22,19 @@ class keywordParser:
     handles user input, and processes templates and JSON data using '!' as a separator.
     """
 
-    def __init__(self, excel_manager=None):
+    def __init__(self, excel_manager=None, excel_managers=None):
         """
         Initialize the keyword parser.
 
         Args:
             excel_manager: An instance of excelManager to use for Excel operations.
                            If None, a new instance will be created when needed.
+            excel_managers: A dictionary mapping Excel filenames to excelManager instances.
+                            This is used for the new format with Excel file specification.
         """
         self.logger = setup_logger('keyword_parser')
         self.excel_manager = excel_manager
+        self.excel_managers = excel_managers or {}  # Dictionary of Excel managers by filename
         self.pattern = r'{{(.*?)}}'
         self.has_input_fields = False
         self.form_submitted = False
@@ -57,6 +60,11 @@ class keywordParser:
             self.logger.info(f"Created json directory: {self.json_dir}")
         
         self.logger.info("Initialized keywordParser")
+        
+        # Log Excel managers if available
+        if excel_managers:
+            excel_files = list(excel_managers.keys())
+            self.logger.info(f"Initialized with {len(excel_files)} Excel managers: {excel_files}")
 
     def _load_config(self) -> dict:
         """Load configuration from config.json file."""
@@ -451,45 +459,125 @@ class keywordParser:
         if not self.excel_manager:
             return "[Excel manager not initialized]"
 
-        parts = content.split("!") # Use '!' as separator
+        # Check if this is using the new format with Excel file specified 
+        parts = content.split("!") 
+        
+        # Handle the case where the first part is an Excel file path
+        excel_manager_to_use = self.excel_manager  # Default to the main Excel manager
+        excel_file = None
+        
+        if parts[0].lower().endswith(('.xlsx', '.xls')):
+            excel_file = parts[0]
+            content_without_file = "!".join(parts[1:]) if len(parts) > 1 else ""
+            
+            # Check if we have this Excel file in our available managers dictionary
+            if hasattr(self, 'excel_managers') and excel_file in self.excel_managers:
+                excel_manager_to_use = self.excel_managers[excel_file]
+                self.logger.info(f"Using Excel manager for file: {excel_file}")
+                
+                # Process the rest of the content using this manager
+                return self._process_excel_content(content_without_file, excel_manager_to_use)
+            else:
+                # Try to load the file from the excel folder or current directory
+                excel_dir = "excel"
+                excel_path = os.path.join(excel_dir, excel_file)
+                
+                if os.path.exists(excel_path):
+                    try:
+                        # Create a temporary manager for this file
+                        temp_manager = excelManager(excel_path)
+                        self.logger.info(f"Created temporary Excel manager for file: {excel_file}")
+                        
+                        # Add to our managers dictionary if it exists
+                        if hasattr(self, 'excel_managers'):
+                            self.excel_managers[excel_file] = temp_manager
+                        
+                        # Process the content using this temp manager
+                        result = self._process_excel_content(content_without_file, temp_manager)
+                        
+                        # Close the manager if it's not in our dictionary
+                        if not hasattr(self, 'excel_managers'):
+                            temp_manager.close()
+                            
+                        return result
+                    except Exception as e:
+                        self.logger.error(f"Error loading Excel file {excel_file}: {str(e)}", exc_info=True)
+                        return f"[Error loading Excel file {excel_file}: {str(e)}]"
+                elif os.path.exists(excel_file):
+                    # Try from current directory
+                    try:
+                        # Create a temporary manager for this file
+                        temp_manager = excelManager(excel_file)
+                        self.logger.info(f"Created temporary Excel manager for file: {excel_file}")
+                        
+                        # Add to our managers dictionary if it exists
+                        if hasattr(self, 'excel_managers'):
+                            self.excel_managers[excel_file] = temp_manager
+                        
+                        # Process the content using this temp manager
+                        result = self._process_excel_content(content_without_file, temp_manager)
+                        
+                        # Close the manager if it's not in our dictionary
+                        if not hasattr(self, 'excel_managers'):
+                            temp_manager.close()
+                            
+                        return result
+                    except Exception as e:
+                        self.logger.error(f"Error loading Excel file {excel_file}: {str(e)}", exc_info=True)
+                        return f"[Error loading Excel file {excel_file}: {str(e)}]"
+                else:
+                    return f"[Excel file not found: {excel_file}]"
+        
+        # If we reach here, it's using the old format or the Excel file specification is invalid
+        return self._process_excel_content(content, excel_manager_to_use)
+        
+    def _process_excel_content(self, content, excel_manager):
+        """Process Excel content using the provided Excel manager."""
+        parts = content.split("!") # Use '!' separator
         if len(parts) < 2:
              # Attempt to handle old format or named range as RANGE
             if ':' in content: # Could be old range XL:Sheet!A1:B2 or XL:A1:B2
                  if '!' in content.split(':')[0]: # Old range with sheet XL:Sheet!A1:B2
                      sheet_ref, cell_range = content.split('!', 1)
-                     return self._call_excel_method("RANGE", f"{sheet_ref}!{cell_range}")
+                     return self._call_excel_method("RANGE", f"{sheet_ref}!{cell_range}", excel_manager)
                  else: # Old range without sheet XL:A1:B2
                      # Explicitly pass RANGE type for cell ranges without sheet name
-                     return self._call_excel_method("RANGE", content)
+                     return self._call_excel_method("RANGE", content, excel_manager)
             elif content.startswith(':'): # Old LAST format XL::A1 or XL::Sheet!A1
-                 return self._call_excel_method("LAST", content[1:]) # Remove leading ':'
+                 return self._call_excel_method("LAST", content[1:], excel_manager) # Remove leading ':'
             else: # Assume it's a named range or old cell format XL:A1 or XL:Sheet!A1
                 if '!' in content: # Old cell with sheet XL:Sheet!A1
-                     return self._call_excel_method("CELL", content)
+                     return self._call_excel_method("CELL", content, excel_manager)
                 else: # Old cell without sheet XL:A1 or a named range
                     # Try as cell first, if error, treat as named range
                     try:
-                       return self._call_excel_method("CELL", content)
+                       return self._call_excel_method("CELL", content, excel_manager)
                     except ValueError:
-                       return self._call_excel_method("RANGE", content) # Treat as named range
+                       return self._call_excel_method("RANGE", content, excel_manager) # Treat as named range
 
 
         xl_type = parts[0].strip().upper()
         xl_params = "!".join(parts[1:]) # Rejoin remaining parts
 
-        return self._call_excel_method(xl_type, xl_params)
+        return self._call_excel_method(xl_type, xl_params, excel_manager)
 
 
-    def _call_excel_method(self, xl_type, xl_params):
+    def _call_excel_method(self, xl_type, xl_params, excel_manager=None):
         """Helper function to call the appropriate excelManager method."""
-        available_sheets = self.excel_manager.get_sheet_names()
+        # Use provided excel_manager if given, otherwise use the default
+        manager = excel_manager or self.excel_manager
+        
+        if not manager:
+            return "[Excel manager not available]"
+            
+        available_sheets = manager.get_sheet_names()
         sheet_name_map = {sheet.lower(): sheet for sheet in available_sheets}
 
         try:
             # {{XL!CELL!A1}} or {{XL!CELL!Sheet2!B5}}
             if xl_type == "CELL":
                 sheet_name, cell_ref = self._get_sheet_and_ref(xl_params, available_sheets[0], sheet_name_map)
-                return self.excel_manager.read_cell(sheet_name, cell_ref)
+                return manager.read_cell(sheet_name, cell_ref)
 
             # {{XL!LAST!A1}} or {{XL!LAST!Sheet2!B5}}
             # {{XL!LAST!sheet_name!A1!Title}}
@@ -501,6 +589,7 @@ class keywordParser:
                     title = last_parts[2]
                     actual_sheet_name = sheet_name_map.get(sheet_name_ref.lower(), sheet_name_ref) # Allow direct sheet name or lookup
                     if actual_sheet_name not in available_sheets: return f"[Sheet not found: {actual_sheet_name}]"
+                    return manager.read_title_total(actual_sheet_name, cell_ref, title)
                     return self.excel_manager.read_title_total(actual_sheet_name, cell_ref, title)
                 else: # Basic LAST format: {{XL!LAST!A1}} or {{XL!LAST!Sheet2!B5}}
                     sheet_name, cell_ref = self._get_sheet_and_ref(xl_params, available_sheets[0], sheet_name_map)
@@ -1682,25 +1771,42 @@ class keywordParser:
         """
         help_text = f"""
 # Excel Keywords
-If Excel keywords `{{{{XL!...}}}}` are detected in the uploaded document, the user will be prompt to upload an Excel file in Step 2.
-### {{{{XL!CELL!`Cell`}}}}
-Get a value from `Cell` (ex: A1).
-### {{{{XL!CELL!`Sheet`!`Cell`}}}}
-Get a value from `Cell` (ex: A1) in `Sheet`.
-### {{{{XL!LAST!`Cell`}}}}
+If Excel keywords `{{{{XL!...}}}}` are detected in the uploaded document, the system will look for and prompt for any missing Excel files in Step 2.
+
+## Excel File Specification
+You can now specify which Excel file to use for each Excel keyword:
+
+### {{{{XL!excel_file.xlsx!CELL!Cell}}}}
+The application will look for `excel_file.xlsx` in the current directory or the `excel` folder. If not found, it will prompt the user to upload it.
+
+## Available Excel Keywords
+
+### {{{{XL!excel_file.xlsx!CELL!`Cell`}}}}
+Get a value from `Cell` (ex: A1) in the specified Excel file.
+
+### {{{{XL!excel_file.xlsx!CELL!`Sheet`!`Cell`}}}}
+Get a value from `Cell` (ex: A1) in `Sheet` of the specified Excel file.
+
+### {{{{XL!excel_file.xlsx!LAST!`Cell`}}}}
 Get the last non-empty value going down from `Cell` (ex: A1). Used for getting totals.
-### {{{{XL!LAST!`Sheet`!`Cell`}}}}
+
+### {{{{XL!excel_file.xlsx!LAST!`Sheet`!`Cell`}}}}
 Get the last non-empty value going down from `Cell` (ex: A1) in `Sheet`. Used for getting totals.
-### {{{{XL!LAST!`Sheet`!`Cell`!`Title`}}}}
+
+### {{{{XL!excel_file.xlsx!LAST!`Sheet`!`Cell`!`Title`}}}}
 From `Cell` (ex: A1), on `Sheet` scan right until the `Title` is detected, then get the last non-empty value going down from the `Title` column. Used for getting totals.
-### {{{{XL!RANGE!`Start Cell`:`End Cell`}}}}
+
+### {{{{XL!excel_file.xlsx!RANGE!`Start Cell`:`End Cell`}}}}
 Get values for the range starting at `Start Cell` (ex: A1) to the `End Cell` (ex: G13). A formated table is returned.
-### {{{{XL!RANGE!`Sheet`!`Start Cell`:`End Cell`}}}}
+
+### {{{{XL!excel_file.xlsx!RANGE!`Sheet`!`Start Cell`:`End Cell`}}}}
 Get values for the range starting at `Start Cell` (ex: A1) to the `End Cell` (ex: G13) in `Sheet`. A formated table is returned.
-### {{{{XL!COLUMN!`Sheet`!`Cell 1`,`Cell 2`,`Cell 3`,...}}}}
-Returns a formatted table with columns `Cell 1` (ex: A1),`Cell 2` (ex: C1),`Cell 3` (ex: F1)... from `Sheet` appended together. Row number must be the same for each. Example: {{{{XL!COLUMN!Support!C4,E4,J4}}}}.
-### {{{{XL!COLUMN!`Sheet`!`Title 1`,`Title 2`,`Title 3`,...!`Row`}}}}
-Returns a formatted table with columns with `Title 1` (ex: Item),`Title 2` (ex: HST),`Title 3` (ex: Total)... from `Sheet` appended together. The `Title` row is specified by `Row` (ex: 6). Example: {{{{XL!COLUMN!Distribution Plan!Unit,DHTC,Total!4}}}}.
+
+### {{{{XL!excel_file.xlsx!COLUMN!`Sheet`!`Cell 1`,`Cell 2`,`Cell 3`,...}}}}
+Returns a formatted table with columns `Cell 1` (ex: A1),`Cell 2` (ex: C1),`Cell 3` (ex: F1)... from `Sheet` appended together. Row number must be the same for each. Example: {{{{XL!budget.xlsx!COLUMN!Support!C4,E4,J4}}}}.
+
+### {{{{XL!excel_file.xlsx!COLUMN!`Sheet`!`Title 1`,`Title 2`,`Title 3`,...!`Row`}}}}
+Returns a formatted table with columns with `Title 1` (ex: Item),`Title 2` (ex: HST),`Title 3` (ex: Total)... from `Sheet` appended together. The `Title` row is specified by `Row` (ex: 6). Example: {{{{XL!sales.xlsx!COLUMN!Distribution Plan!Unit,DHTC,Total!4}}}}.
 """
         return help_text 
 

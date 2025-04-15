@@ -54,19 +54,42 @@ The `keywordParser` class processes templating keywords (enclosed in `{{}}`) wit
 
 Keywords to fetch data from an Excel file.
 
-If Excel keywords `{{XL!...}}` are detected in the uploaded document, the user will be prompt to upload an Excel file in Step 2.
+If Excel keywords `{{XL!...}}` are detected in the uploaded document, the user will be prompted to upload the required Excel file(s) in Step 2.
 
-| Keyword Pattern | Description | Example |
-| :-------------- | :---------- | :------ |
-| `{{XL!CELL!cell_ref}}` | Get a value from `cell_ref` (ex: A1). | `{{XL!CELL!A1}}` → `$127,350.00` |
-| `{{XL!CELL!Sheet!cell_ref}}` | Get a value from `cell_ref` (ex: A1) in `Sheet`. | `{{XL!CELL!Sales!C10}}` → `42%` |
-| `{{XL!LAST!cell_ref}}` | Get the last non-empty value going down from `cell_ref` (ex: A1). Used for getting totals. | `{{XL!LAST!F5}}` → `Total: $45,982.75` |
-| `{{XL!LAST!Sheet!cell_ref}}` | Get the last non-empty value going down from `cell_ref` (ex: A1) in `Sheet`. Used for getting totals. | `{{XL!LAST!Summary!B2}}` → `Grand Total: 239 units` |
-| `{{XL!LAST!Sheet!cell_ref!Title}}` | From `cell_ref` (ex: A1), on `Sheet` scan right until the `Title` is detected, then get the last non-empty value going down from the `Title` column. Used for getting totals. | `{{XL!LAST!Items!A4!Total Costs}}` → `$12,540.00` |
-| `{{XL!RANGE!Start Cell:End Cell}}` | Get values for the range starting at `Start Cell` (ex: A1) to the `End Cell` (ex: G13). A formatted table is returned. | `{{XL!RANGE!A5:D10}}` → *[inserts formatted table]* |
-| `{{XL!RANGE!Sheet!Start Cell:End Cell}}` | Get values for the range starting at `Start Cell` (ex: A1) to the `End Cell` (ex: G13) in `Sheet`. A formatted table is returned. | `{{XL!RANGE!Expenses!B2:G10}}` → *[inserts formatted table]* |
-| `{{XL!COLUMN!Sheet!Cell 1,Cell 2,Cell 3,...}}` | Returns a formatted table with columns `Cell 1` (ex: A1),`Cell 2` (ex: C1),`Cell 3` (ex: F1)... from `Sheet` appended together. Row number must be the same for each. Example: {{XL!COLUMN!Support!C4,E4,J4}}. | `{{XL!COLUMN!Items!A4,E4,F4}}` → *[inserts table with selected columns]* |
-| `{{XL!COLUMN!Sheet!Title 1,Title 2,Title 3,...!Row}}` | Returns a formatted table with columns with `Title 1` (ex: Item),`Title 2` (ex: HST),`Title 3` (ex: Total)... from `Sheet` appended together. The `Title` row is specified by `Row` (ex: 6). Example: {{XL!COLUMN!Distribution Plan!Unit,DHTC,Total!4}}. | `{{XL!COLUMN!Data!"Category,Value"!1}}` → *[inserts table with matching columns]* |
+## Excel File Specification
+You can now specify which Excel file to use for each Excel keyword:
+
+### {{XL!excel_file.xlsx!CELL!Cell}}
+The application will look for `excel_file.xlsx` in the current directory or the `excel` folder. If not found, it will prompt the user to upload it.
+
+## Available Excel Keywords
+
+### {{XL!excel_file.xlsx!CELL!`Cell`}}
+Get a value from `Cell` (ex: A1) in the specified Excel file.
+
+### {{XL!excel_file.xlsx!CELL!`Sheet`!`Cell`}}
+Get a value from `Cell` (ex: A1) in `Sheet` of the specified Excel file.
+
+### {{XL!excel_file.xlsx!LAST!`Cell`}}
+Get the last non-empty value going down from `Cell` (ex: A1). Used for getting totals.
+
+### {{XL!excel_file.xlsx!LAST!`Sheet`!`Cell`}}
+Get the last non-empty value going down from `Cell` (ex: A1) in `Sheet`. Used for getting totals.
+
+### {{XL!excel_file.xlsx!LAST!`Sheet`!`Cell`!`Title`}}
+From `Cell` (ex: A1), on `Sheet` scan right until the `Title` is detected, then get the last non-empty value going down from the `Title` column. Used for getting totals.
+
+### {{XL!excel_file.xlsx!RANGE!`Start Cell`:`End Cell`}}
+Get values for the range starting at `Start Cell` (ex: A1) to the `End Cell` (ex: G13). A formatted table is returned.
+
+### {{XL!excel_file.xlsx!RANGE!`Sheet`!`Start Cell`:`End Cell`}}
+Get values for the range starting at `Start Cell` (ex: A1) to the `End Cell` (ex: G13) in `Sheet`. A formatted table is returned.
+
+### {{XL!excel_file.xlsx!COLUMN!`Sheet`!`Cell 1`,`Cell 2`,`Cell 3`,...}}
+Returns a formatted table with columns `Cell 1` (ex: A1),`Cell 2` (ex: C1),`Cell 3` (ex: F1)... from `Sheet` appended together. Row number must be the same for each. Example: {{XL!budget.xlsx!COLUMN!Support!C4,E4,J4}}.
+
+### {{XL!excel_file.xlsx!COLUMN!`Sheet`!`Title 1`,`Title 2`,`Title 3`,...!`Row`}}
+Returns a formatted table with columns with `Title 1` (ex: Item),`Title 2` (ex: HST),`Title 3` (ex: Total)... from `Sheet` appended together. The `Title` row is specified by `Row` (ex: 6). Example: {{XL!sales.xlsx!COLUMN!Distribution Plan!Unit,DHTC,Total!4}}.
 
 ##### User Input Keywords (`{{INPUT!...}}`)
 

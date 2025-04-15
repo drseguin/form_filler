@@ -38,6 +38,14 @@ def preprocess_word_doc(doc_path):
     }
     needs_excel = False
     total_keywords = 0
+    excel_files = set()  # Store unique Excel files needed
+    excel_files_not_found = []  # Store Excel files that were not found
+
+    # Ensure excel directory exists
+    excel_dir = "excel"
+    if not os.path.exists(excel_dir):
+        os.makedirs(excel_dir)
+        logger.info(f"Created excel directory: {excel_dir}")
 
     def categorize_keyword(content):
         nonlocal needs_excel
@@ -48,19 +56,49 @@ def preprocess_word_doc(doc_path):
 
         if keyword_type == "XL":
             needs_excel = True
+            
             if len(parts) > 1:
-                sub_parts = parts[1].split("!", 1)
-                xl_subtype = sub_parts[0].strip().upper()
-                if xl_subtype in keywords["excel"]:
-                    keywords["excel"][xl_subtype].append(content)
+                # Check if the next part might be an Excel file path
+                excel_parts = parts[1].split("!", 1)
+                excel_file = excel_parts[0].strip()
+                rest_of_content = excel_parts[1] if len(excel_parts) > 1 else ""
+                
+                # If the excel_file looks like a file path ending with .xlsx or .xls
+                if excel_file.lower().endswith(('.xlsx', '.xls')):
+                    excel_files.add(excel_file)  # Add to set of required Excel files
+                    
+                    # Check if file exists in current path or excel folder
+                    file_exists = os.path.exists(excel_file) or os.path.exists(os.path.join(excel_dir, excel_file))
+                    
+                    if not file_exists and excel_file not in excel_files_not_found:
+                        excel_files_not_found.append(excel_file)
+                        logger.info(f"Excel file not found: {excel_file}")
+                    
+                    # Re-parse the rest as a normal Excel keyword
+                    if rest_of_content:
+                        # Check if the next part is a valid Excel subtype
+                        sub_parts = rest_of_content.split("!", 1)
+                        xl_subtype = sub_parts[0].strip().upper()
+                        if xl_subtype in keywords["excel"]:
+                            keywords["excel"][xl_subtype].append(content)
+                        else:
+                            keywords["excel"]["OTHER"].append(content)
+                    else:
+                        keywords["excel"]["OTHER"].append(content)
                 else:
-                     # If subtype unknown, check if it looks like an old format/named range
-                     if ':' not in parts[1] and '!' not in parts[1]: # Likely named range or old cell ref
-                          keywords["excel"]["RANGE"].append(content) # Assume RANGE for named range
-                     else:
-                          keywords["excel"]["OTHER"].append(content) # Potentially old or invalid format
+                    # Old format or just XL!SUBTYPE without an Excel file specified
+                    sub_parts = parts[1].split("!", 1)
+                    xl_subtype = sub_parts[0].strip().upper()
+                    if xl_subtype in keywords["excel"]:
+                        keywords["excel"][xl_subtype].append(content)
+                    else:
+                        # If subtype unknown, check if it looks like an old format/named range
+                        if ':' not in parts[1] and '!' not in parts[1]: # Likely named range or old cell ref
+                            keywords["excel"]["RANGE"].append(content) # Assume RANGE for named range
+                        else:
+                            keywords["excel"]["OTHER"].append(content) # Potentially old or invalid format
             else:
-                 keywords["excel"]["OTHER"].append(content) # Invalid XL format {{XL}}
+                keywords["excel"]["OTHER"].append(content) # Invalid XL format {{XL}}
 
         elif keyword_type == "INPUT":
             if len(parts) > 1:
@@ -153,6 +191,8 @@ def preprocess_word_doc(doc_path):
         "ai_count": len(keywords["ai"]),
         "other_count": len(keywords["other"]),
         "needs_excel": needs_excel,
+        "excel_files": list(excel_files),
+        "excel_files_not_found": excel_files_not_found,
         "keywords": keywords
     }
     
@@ -162,6 +202,12 @@ def preprocess_word_doc(doc_path):
     for t_type, items in keywords["template"].items():
         if items:
             logger.info(f"Template {t_type} items: {items}")
+    
+    # Debug log for Excel files
+    if excel_files:
+        logger.info(f"Excel files needed: {list(excel_files)}")
+    if excel_files_not_found:
+        logger.info(f"Excel files not found: {excel_files_not_found}")
     
     return summary
 
@@ -449,6 +495,15 @@ def process_word_doc(doc_path, excel_path=None, parser=None):
     progress_bar.progress(1.0)
     progress_text.text(f"Processing finished. Approximately {processed_keywords_count} keywords processed.")
 
+    # Close all Excel managers to free resources
+    if hasattr(parser, 'excel_managers') and parser.excel_managers:
+        for filename, manager in parser.excel_managers.items():
+            try:
+                manager.close()
+                logger.info(f"Closed Excel manager for {filename}")
+            except Exception as e:
+                logger.error(f"Error closing Excel manager for {filename}: {str(e)}")
+
     return doc, processed_keywords_count
 
 
@@ -464,6 +519,17 @@ def display_keyword_summary(summary):
             st.write(f"Total: {total_excel}")
             if summary["needs_excel"]:
                 st.write("*Excel file required*")
+                
+                # Show Excel files if using the new format
+                if "excel_files" in summary and summary["excel_files"]:
+                    st.write("**Excel Files Referenced:**")
+                    for excel_file in summary["excel_files"]:
+                        if "excel_files_not_found" in summary and excel_file in summary["excel_files_not_found"]:
+                            st.write(f"- {excel_file} (not found)")
+                        else:
+                            st.write(f"- {excel_file}")
+                            
+            # Show Excel keyword types            
             for subtype, count in summary["excel_counts"].items():
                  if count > 0: st.write(f"- {subtype}: {count}")
 
@@ -521,6 +587,8 @@ def main():
         'current_step': 1,  # Track the current wizard step
         'doc_uploaded': False, 'doc_path': None, 'analysis_summary': None,
         'excel_uploaded': False, 'excel_path': None, 'excel_manager_instance': None,
+        'excel_files_uploaded': {}, 'excel_managers': {},  # New state for multiple Excel files
+        'rerun_triggered_after_upload': False, 'rerun_triggered_for_found_files': False,  # Flags to prevent infinite reruns
         'keyword_parser_instance': None, 'form_submitted_main': False, 'input_values_main': {},
         'processing_started': False, 'processed_doc_path': None, 'processed_count': 0
     }
@@ -607,11 +675,33 @@ def main():
             if st.session_state.processed_doc_path and os.path.exists(st.session_state.processed_doc_path): 
                 os.unlink(st.session_state.processed_doc_path)
                 logger.info(f"Removed processed document: {st.session_state.processed_doc_path}")
-            # Close Excel Manager if open
-            if st.session_state.excel_manager_instance: st.session_state.excel_manager_instance.close()
+            
+            # Close Excel Managers
+            if st.session_state.excel_manager_instance: 
+                st.session_state.excel_manager_instance.close()
+                
+            # Close all individual Excel managers
+            if 'excel_managers' in st.session_state and st.session_state.excel_managers:
+                for filename, manager in st.session_state.excel_managers.items():
+                    try:
+                        manager.close()
+                        logger.info(f"Closed Excel manager for {filename}")
+                    except Exception as e:
+                        logger.error(f"Error closing Excel manager for {filename}: {str(e)}")
+            
             # Reset state variables
             for key in default_state:
                 st.session_state[key] = default_state[key]
+                
+            # Clear additional Excel-related state
+            if 'excel_files_uploaded' in st.session_state:
+                st.session_state.excel_files_uploaded = {}
+            if 'excel_managers' in st.session_state:
+                st.session_state.excel_managers = {}
+            # Reset rerun flags
+            st.session_state.rerun_triggered_after_upload = False
+            st.session_state.rerun_triggered_for_found_files = False
+                
             st.rerun()
     
     # Main content area - only show the current step
@@ -647,6 +737,13 @@ def main():
                 try:
                     summary = preprocess_word_doc(st.session_state.doc_path)
                     st.session_state.analysis_summary = summary
+                    
+                    # Initialize session state for excel files
+                    if "excel_files_uploaded" not in st.session_state:
+                        st.session_state.excel_files_uploaded = {}
+                    if "excel_managers" not in st.session_state:
+                        st.session_state.excel_managers = {}
+                    
                     st.rerun()
                 except Exception as e:
                     st.error(f"Analysis failed: {e}")
@@ -661,45 +758,140 @@ def main():
             
             # Only show Excel uploader if needed based on analysis
             if needs_excel:
-                st.write("Based on the analysis, an Excel file is required.")
-                excel_file = st.file_uploader("Upload Required Excel Spreadsheet (.xlsx)", 
-                                            type=["xlsx"], key="main_excel_uploader")
-                
-                if excel_file and not st.session_state.excel_uploaded:
-                    # Save new excel file
-                    if st.session_state.excel_path and os.path.exists(st.session_state.excel_path): 
-                        os.unlink(st.session_state.excel_path)  # Clean old temp excel
+                if st.session_state.analysis_summary.get("excel_files"):
+                    # New format with specific Excel files
+                    excel_files = st.session_state.analysis_summary["excel_files"]
+                    excel_files_not_found = st.session_state.analysis_summary["excel_files_not_found"]
                     
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_excel:
-                        tmp_excel.write(excel_file.getvalue())
-                        st.session_state.excel_path = tmp_excel.name
+                    if excel_files_not_found:
+                        st.write("### Excel Files Required")
+                        st.write("The following Excel files were specified in the document but not found. Please upload them:")
+                        
+                        for excel_file in excel_files_not_found:
+                            # Check if this file has already been uploaded
+                            if excel_file in st.session_state.excel_files_uploaded:
+                                st.success(f"✅ {excel_file} has been uploaded.")
+                                continue
+                                
+                            st.write(f"**{excel_file}**")
+                            excel_upload_key = f"excel_uploader_{excel_file}"
+                            
+                            # Create uploader for this file
+                            uploaded_file = st.file_uploader(f"Upload {excel_file}", 
+                                                           type=["xlsx", "xls"], key=excel_upload_key)
+                            
+                            if uploaded_file:
+                                # Save the uploaded file to the excel directory with the exact filename specified
+                                excel_dir = "excel"
+                                save_path = os.path.join(excel_dir, excel_file)
+                                
+                                with open(save_path, "wb") as f:
+                                    f.write(uploaded_file.getbuffer())
+                                
+                                st.success(f"Saved {excel_file} to excel folder")
+                                logger.info(f"Saved uploaded Excel file to {save_path}")
+                                
+                                # Initialize Excel manager for this file
+                                try:
+                                    st.session_state.excel_managers[excel_file] = excelManager(save_path)
+                                    st.session_state.excel_files_uploaded[excel_file] = True
+                                    st.rerun()  # Refresh to update the UI
+                                except Exception as e:
+                                    st.error(f"Failed to load Excel file {excel_file}: {e}")
+                                    logger.error(f"Failed to load Excel file {excel_file}: {e}", exc_info=True)
+                        
+                        # Check if all required files have been uploaded
+                        all_files_uploaded = all(excel_file in st.session_state.excel_files_uploaded 
+                                              for excel_file in excel_files_not_found)
+                        
+                        if all_files_uploaded:
+                            st.success("All required Excel files have been uploaded!")
+                            st.session_state.excel_uploaded = True
+                            # Only rerun if this is the first time we're setting the flag
+                            if not st.session_state.get('rerun_triggered_after_upload', False):
+                                st.session_state.rerun_triggered_after_upload = True
+                                st.rerun()
+                        else:
+                            st.session_state.excel_uploaded = False
+                            
+                    else:
+                        # All specified Excel files were found
+                        st.success("All Excel files specified in the document have been found in the excel folder.")
+                        st.session_state.excel_uploaded = True
+                        
+                        # Initialize managers for the found files
+                        excel_dir = "excel"
+                        for excel_file in excel_files:
+                            file_path = os.path.join(excel_dir, excel_file)
+                            if os.path.exists(file_path) and excel_file not in st.session_state.excel_managers:
+                                try:
+                                    st.session_state.excel_managers[excel_file] = excelManager(file_path)
+                                    st.session_state.excel_files_uploaded[excel_file] = True
+                                except Exception as e:
+                                    st.error(f"Failed to load Excel file {excel_file}: {e}")
+                                    logger.error(f"Failed to load Excel file {excel_file}: {e}", exc_info=True)
+                        
+                        # Only rerun if this is the first time we're setting the flag for found files
+                        if not st.session_state.get('rerun_triggered_for_found_files', False):
+                            st.session_state.rerun_triggered_for_found_files = True
+                            st.rerun()
+                else:
+                    # Old format without specific Excel files - use the standard uploader
+                    st.write("Based on the analysis, an Excel file is required.")
+                    st.write("*Note: The document uses the old Excel keyword format without specifying files. Please upload an Excel file to use for all Excel keywords.*")
                     
-                    st.session_state.excel_uploaded = True
+                    excel_file = st.file_uploader("Upload Required Excel Spreadsheet (.xlsx)", 
+                                                type=["xlsx"], key="main_excel_uploader")
                     
-                    # Reset excel manager instance as file changed
-                    if st.session_state.excel_manager_instance: 
-                        st.session_state.excel_manager_instance.close()
-                    st.session_state.excel_manager_instance = None
-                    st.rerun()
-                
+                    if excel_file and not st.session_state.excel_uploaded:
+                        # Save new excel file
+                        if st.session_state.excel_path and os.path.exists(st.session_state.excel_path): 
+                            os.unlink(st.session_state.excel_path)  # Clean old temp excel
+                        
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_excel:
+                            tmp_excel.write(excel_file.getvalue())
+                            st.session_state.excel_path = tmp_excel.name
+                        
+                        st.session_state.excel_uploaded = True
+                        
+                        # Reset excel manager instance as file changed
+                        if st.session_state.excel_manager_instance: 
+                            st.session_state.excel_manager_instance.close()
+                        st.session_state.excel_manager_instance = None
+                        st.rerun()
             else:
                 st.success("No Excel file required. You can proceed to the next step.")
             
-            # Initialize Managers
-            if needs_excel and st.session_state.excel_path and not st.session_state.excel_manager_instance:
+            # Initialize Excel Manager for old format
+            if needs_excel and not st.session_state.analysis_summary.get("excel_files") and st.session_state.excel_path and not st.session_state.excel_manager_instance:
                 try:
                     with st.spinner("Loading Excel data..."):
                         st.session_state.excel_manager_instance = excelManager(st.session_state.excel_path)
-#                        st.success("Excel data loaded successfully!")
                 except Exception as e:
                     st.error(f"Failed to load Excel file: {e}")
                     st.session_state.excel_uploaded = False  # Reset upload status
                     st.rerun()
             
+            # Create parser instance with appropriate Excel manager(s)
+            # This will be a more complex parser setup for the new format to handle multiple Excel files
+            current_excel_manager = None
+            if needs_excel:
+                if st.session_state.analysis_summary.get("excel_files"):
+                    # New format - use the first manager as default but will update parser to handle all files
+                    if st.session_state.excel_managers:
+                        # Use the first manager as the default
+                        current_excel_manager = next(iter(st.session_state.excel_managers.values()))
+                else:
+                    # Old format
+                    current_excel_manager = st.session_state.excel_manager_instance
+            
             # Always ensure parser instance exists, update if excel manager changes
-            current_excel_manager = st.session_state.excel_manager_instance if needs_excel else None
-            if not st.session_state.keyword_parser_instance or st.session_state.keyword_parser_instance.excel_manager != current_excel_manager:
+            if not st.session_state.keyword_parser_instance or getattr(st.session_state.keyword_parser_instance, 'excel_manager', None) != current_excel_manager:
                 st.session_state.keyword_parser_instance = keywordParser(current_excel_manager)
+                
+                # If we have multiple Excel managers, store them for access in the parser
+                if st.session_state.excel_managers:
+                    st.session_state.keyword_parser_instance.excel_managers = st.session_state.excel_managers
     
     # --- Step 3: User Input Form (if needed) ---
     elif st.session_state.current_step == 3:
