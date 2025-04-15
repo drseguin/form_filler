@@ -435,6 +435,13 @@ def process_word_doc(doc_path, excel_path=None, parser=None):
         keywords_in_para = len(re.findall(pattern, original_text))
 
         if keywords_in_para > 0:
+            # Extract keywords in this paragraph for display
+            keywords_in_this_para = re.findall(pattern, original_text)
+            current_keyword = keywords_in_this_para[0] if keywords_in_this_para else "Unknown"
+            
+            # Update progress text to show current keyword
+            progress_text.text(f"Processing: {processed_keywords_count}/{total_keywords_initial} keywords | Current: {{{{{current_keyword}}}}}")
+            
             try:
                 # parser.parse will handle replacements, including potential table creation
                 parsed_result = parser.parse(original_text)
@@ -620,9 +627,6 @@ def process_word_doc(doc_path, excel_path=None, parser=None):
         elements_processed += 1
         progress = elements_processed / total_elements if total_elements > 0 else 0
         progress_bar.progress(progress)
-        # Update text based on estimated keywords processed vs initial total
-        progress_text.text(f"Processing: {processed_keywords_count}/{total_keywords_initial} keywords estimated...")
-
 
     progress_bar.progress(1.0)
     progress_text.text(f"Processing finished. Approximately {processed_keywords_count} keywords processed.")
