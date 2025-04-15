@@ -183,4 +183,4 @@ logs/*.log
 !logs/__init__.py
 !logs/logger_config.py
 !templates/
-
+.DS_Store
