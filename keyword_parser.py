@@ -1480,23 +1480,25 @@ class keywordParser:
             
             # Call OpenAI API to generate summary
             try:
-                import openai
+                from openai import OpenAI
                 
-                # Set API key
-                openai.api_key = api_key
+                # Create client
+                client = OpenAI(api_key=api_key)
                 
                 # Create prompt with instructions
                 full_prompt = f"{prompt_text}\n\nText to summarize (keep under {words_limit} words):\n\n{document_text}"
                 
                 # Call OpenAI API
-                response = openai.Completion.create(
-                    model="gpt-3.5-turbo-instruct",  # Or another appropriate model
-                    prompt=full_prompt,
+                response = client.chat.completions.create(
+                    model="gpt-4o",  # Updated to use chat model
+                    messages=[
+                        {"role": "user", "content": full_prompt}
+                    ],
                     max_tokens=words_limit * 2,  # Approximate token count
                     temperature=0.5
                 )
                 
-                summary = response.choices[0].text.strip()
+                summary = response.choices[0].message.content.strip()
                 
                 # Count words and warn if exceeded
                 word_count = len(summary.split())
@@ -1511,7 +1513,7 @@ class keywordParser:
             
             except ImportError:
                 self.logger.error("OpenAI library not available")
-                return "[Error: OpenAI library not available. Install with 'pip install openai']"
+                return "[Error: OpenAI library not available. Install with 'pip install openai>=1.0.0']"
             
             except Exception as e:
                 self.logger.error(f"Error generating summary: {str(e)}", exc_info=True)
