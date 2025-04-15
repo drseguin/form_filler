@@ -37,18 +37,28 @@ def preprocess_word_doc(doc_path):
         "other": []
     }
     needs_excel = False
+    needs_templates = False
     total_keywords = 0
     excel_files = set()  # Store unique Excel files needed
     excel_files_not_found = []  # Store Excel files that were not found
+    template_files = set()  # Store unique template files needed
+    template_files_not_found = []  # Store template files that were not found
 
     # Ensure excel directory exists
     excel_dir = "excel"
     if not os.path.exists(excel_dir):
         os.makedirs(excel_dir)
         logger.info(f"Created excel directory: {excel_dir}")
+        
+    # Ensure templates directory exists
+    templates_dir = "templates"
+    if not os.path.exists(templates_dir):
+        os.makedirs(templates_dir)
+        logger.info(f"Created templates directory: {templates_dir}")
 
     def categorize_keyword(content):
         nonlocal needs_excel
+        nonlocal needs_templates
         parts = content.split("!", 1) # Use '!' separator
         keyword_type = parts[0].strip().upper()
 
@@ -112,6 +122,7 @@ def preprocess_word_doc(doc_path):
                  keywords["input"]["text"].append(content) # {{INPUT}} defaults to text
 
         elif keyword_type == "TEMPLATE":
+            needs_templates = True
             # Extract sections/ranges correctly
             if len(parts) <= 1:
                 # No parameters, just the keyword type - should never happen for TEMPLATE but handle it
@@ -124,6 +135,17 @@ def preprocess_word_doc(doc_path):
             template_path = template_parts[0]
             
             logger.info(f"Processing TEMPLATE keyword: '{content}' with path '{template_path}'")
+            
+            # Add template file to the set of required templates
+            if template_path.lower().endswith(('.docx', '.txt')):
+                template_files.add(template_path)
+                
+                # Check if file exists in current path or templates folder
+                file_exists = os.path.exists(template_path) or os.path.exists(os.path.join(templates_dir, template_path))
+                
+                if not file_exists and template_path not in template_files_not_found:
+                    template_files_not_found.append(template_path)
+                    logger.info(f"Template file not found: {template_path}")
             
             # If there's no second part with section=, it's a full template
             if len(template_parts) == 1:
@@ -191,8 +213,11 @@ def preprocess_word_doc(doc_path):
         "ai_count": len(keywords["ai"]),
         "other_count": len(keywords["other"]),
         "needs_excel": needs_excel,
+        "needs_templates": needs_templates,
         "excel_files": list(excel_files),
         "excel_files_not_found": excel_files_not_found,
+        "template_files": list(template_files),
+        "template_files_not_found": template_files_not_found,
         "keywords": keywords
     }
     
@@ -208,6 +233,12 @@ def preprocess_word_doc(doc_path):
         logger.info(f"Excel files needed: {list(excel_files)}")
     if excel_files_not_found:
         logger.info(f"Excel files not found: {excel_files_not_found}")
+        
+    # Debug log for Template files
+    if template_files:
+        logger.info(f"Template files needed: {list(template_files)}")
+    if template_files_not_found:
+        logger.info(f"Template files not found: {template_files_not_found}")
     
     return summary
 
@@ -543,6 +574,17 @@ def display_keyword_summary(summary):
             # Enhanced Template section with more details
             st.markdown("**Template Keywords (`TEMPLATE!`)**")
             st.write(f"Total: {summary['template_total']}")
+            
+            # Show Template files
+            if summary.get("needs_templates") and "template_files" in summary and summary["template_files"]:
+                st.write("**Template Files Referenced:**")
+                for template_file in summary["template_files"]:
+                    if "template_files_not_found" in summary and template_file in summary["template_files_not_found"]:
+                        st.write(f"- {template_file} (not found)")
+                    else:
+                        st.write(f"- {template_file}")
+            
+            # Show Template keyword types
             for template_type, count in summary["template_count"].items():
                 if count > 0: 
                     # Just show the uppercase name and count
@@ -588,7 +630,9 @@ def main():
         'doc_uploaded': False, 'doc_path': None, 'analysis_summary': None,
         'excel_uploaded': False, 'excel_path': None, 'excel_manager_instance': None,
         'excel_files_uploaded': {}, 'excel_managers': {},  # New state for multiple Excel files
+        'templates_uploaded': False, 'template_files_uploaded': {}, # New state for templates
         'rerun_triggered_after_upload': False, 'rerun_triggered_for_found_files': False,  # Flags to prevent infinite reruns
+        'rerun_triggered_after_template_upload': False, 'rerun_triggered_for_found_templates': False,  # Template flags
         'keyword_parser_instance': None, 'form_submitted_main': False, 'input_values_main': {},
         'processing_started': False, 'processed_doc_path': None, 'processed_count': 0
     }
@@ -638,8 +682,11 @@ def main():
         if st.session_state.current_step == 1 and st.session_state.doc_uploaded:
             can_proceed = True
         elif st.session_state.current_step == 2:
-            needs_excel = st.session_state.analysis_summary and st.session_state.analysis_summary["needs_excel"]
-            can_proceed = (not needs_excel) or st.session_state.excel_uploaded
+            needs_excel = st.session_state.analysis_summary and st.session_state.analysis_summary.get("needs_excel", False)
+            needs_templates = st.session_state.analysis_summary and st.session_state.analysis_summary.get("needs_templates", False)
+            excel_ready = (not needs_excel) or st.session_state.excel_uploaded
+            templates_ready = (not needs_templates) or st.session_state.templates_uploaded
+            can_proceed = excel_ready and templates_ready
         elif st.session_state.current_step == 3:
             has_inputs = st.session_state.analysis_summary and sum(st.session_state.analysis_summary['input_counts'].values()) > 0
             can_proceed = (not has_inputs) or st.session_state.form_submitted_main
@@ -698,9 +745,17 @@ def main():
                 st.session_state.excel_files_uploaded = {}
             if 'excel_managers' in st.session_state:
                 st.session_state.excel_managers = {}
+                
+            # Clear template-related state
+            if 'template_files_uploaded' in st.session_state:
+                st.session_state.template_files_uploaded = {}
+            st.session_state.templates_uploaded = False
+                
             # Reset rerun flags
             st.session_state.rerun_triggered_after_upload = False
             st.session_state.rerun_triggered_for_found_files = False
+            st.session_state.rerun_triggered_after_template_upload = False
+            st.session_state.rerun_triggered_for_found_templates = False
                 
             st.rerun()
     
@@ -861,6 +916,68 @@ def main():
                         st.rerun()
             else:
                 st.success("No Excel file required. You can proceed to the next step.")
+                
+            # Check if template files are needed
+            needs_templates = st.session_state.analysis_summary.get("needs_templates", False)
+            
+            if needs_templates and "template_files" in st.session_state.analysis_summary:
+                template_files = st.session_state.analysis_summary["template_files"]
+                template_files_not_found = st.session_state.analysis_summary.get("template_files_not_found", [])
+                
+                if template_files_not_found:
+                    st.write("### Template Files Required")
+                    st.write("The following template files were specified in the document but not found. Please upload them:")
+                    
+                    for template_file in template_files_not_found:
+                        # Check if this file has already been uploaded
+                        if template_file in st.session_state.template_files_uploaded:
+                            st.success(f"✅ {template_file} has been uploaded.")
+                            continue
+                            
+                        st.write(f"**{template_file}**")
+                        template_upload_key = f"template_uploader_{template_file}"
+                        
+                        # Create uploader for this file
+                        uploaded_file = st.file_uploader(f"Upload {template_file}", 
+                                                       type=["docx", "txt"], key=template_upload_key)
+                        
+                        if uploaded_file:
+                            # Save the uploaded file to the templates directory with the exact filename specified
+                            templates_dir = "templates"
+                            save_path = os.path.join(templates_dir, template_file)
+                            
+                            with open(save_path, "wb") as f:
+                                f.write(uploaded_file.getbuffer())
+                            
+                            st.success(f"Saved {template_file} to templates folder")
+                            logger.info(f"Saved uploaded template file to {save_path}")
+                            
+                            # Mark template as uploaded
+                            st.session_state.template_files_uploaded[template_file] = True
+                            st.rerun()  # Refresh to update the UI
+                    
+                    # Check if all required template files have been uploaded
+                    all_templates_uploaded = all(template_file in st.session_state.template_files_uploaded 
+                                          for template_file in template_files_not_found)
+                    
+                    if all_templates_uploaded:
+                        st.success("All required template files have been uploaded!")
+                        st.session_state.templates_uploaded = True
+                        # Only rerun if this is the first time we're setting the flag
+                        if not st.session_state.get('rerun_triggered_after_template_upload', False):
+                            st.session_state.rerun_triggered_after_template_upload = True
+                            st.rerun()
+                    else:
+                        st.session_state.templates_uploaded = False
+                else:
+                    # All template files were found
+                    st.success("All template files specified in the document have been found in the templates folder.")
+                    st.session_state.templates_uploaded = True
+                    
+                    # Only rerun if this is the first time we're setting the flag for found templates
+                    if not st.session_state.get('rerun_triggered_for_found_templates', False):
+                        st.session_state.rerun_triggered_for_found_templates = True
+                        st.rerun()
             
             # Initialize Excel Manager for old format
             if needs_excel and not st.session_state.analysis_summary.get("excel_files") and st.session_state.excel_path and not st.session_state.excel_manager_instance:
