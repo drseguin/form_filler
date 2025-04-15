@@ -67,6 +67,50 @@ def get_openai_api_key() -> str:
     """
     return st.session_state.get('openai_api_key', '')
 
+# Function to save API key to secrets.toml
+def save_openai_api_key(api_key: str) -> bool:
+    """
+    Save the OpenAI API key to the .streamlit/secrets.toml file.
+    
+    Args:
+        api_key: The OpenAI API key to save
+        
+    Returns:
+        bool: True if the API key was saved successfully, False otherwise
+    """
+    secrets_path = Path(".streamlit/secrets.toml")
+    
+    try:
+        # Create .streamlit directory if it doesn't exist
+        secrets_path.parent.mkdir(exist_ok=True)
+        
+        # Read existing content if file exists
+        content = []
+        if secrets_path.exists():
+            with open(secrets_path, 'r', encoding='utf-8') as file:
+                content = file.readlines()
+        
+        # Update or add the API key
+        api_key_updated = False
+        for i, line in enumerate(content):
+            if line.strip().startswith('openai_api_key'):
+                content[i] = f'openai_api_key = "{api_key}"\n'
+                api_key_updated = True
+                break
+        
+        if not api_key_updated:
+            content.append(f'openai_api_key = "{api_key}"\n')
+        
+        # Write back to file
+        with open(secrets_path, 'w', encoding='utf-8') as file:
+            file.writelines(content)
+        
+        logger.info("OpenAI API key saved to .streamlit/secrets.toml")
+        return True
+    except Exception as e:
+        logger.error(f"Error saving API key: {str(e)}", exc_info=True)
+        return False
+
 def preprocess_word_doc(doc_path):
     """
     Analyze a Word document to determine what keywords it contains, using '!' separator.
@@ -981,11 +1025,11 @@ def main():
     if not api_key_set or not st.session_state.get('api_key_valid', False):
         st.header("OpenAI API Key Required")
         st.warning("An OpenAI API key is required to use AI features in this application.")
-        st.info("For security, your key will only be stored in this session and not saved to disk.")
+        st.info("Your key will be saved to .streamlit/secrets.toml so you only need to enter it once.")
         
         with st.form("api_key_form"):
             api_key = st.text_input("OpenAI API Key", type="password", 
-                                    help="Your key will only be stored in memory for this session")
+                                    help="Your key will be securely saved for future sessions")
             submitted = st.form_submit_button("Validate and Save API Key")
             
             if submitted:
@@ -1009,7 +1053,13 @@ def main():
                         
                         # If we get here, the API key is valid
                         st.session_state['api_key_valid'] = True
-                        st.success("API key validated and saved for this session!")
+                        
+                        # Save the API key to secrets.toml
+                        if save_openai_api_key(api_key):
+                            st.success("API key validated and saved to .streamlit/secrets.toml!")
+                        else:
+                            st.warning("API key validated but could not be saved to .streamlit/secrets.toml. It will be stored for this session only.")
+                        
                         logger.info("API key validated successfully")
                         st.rerun()
                     except Exception as e:
