@@ -502,7 +502,7 @@ def process_word_doc(doc_path, excel_path=None, parser=None):
     logger.info(f"Found {total_keywords_initial} keywords in document")
     
     if total_keywords_initial == 0:
-        st.warning("No keywords found in the document.")
+        st.error("No keywords found in the document. The document should include keywords in double curly braces like {{keyword}}. Please upload a different document with keywords to process.")
         logger.warning("No keywords found in the document")
         return doc, 0
 
@@ -889,7 +889,8 @@ def main():
         'keyword_parser_instance': None, 'form_submitted_main': False, 'input_values_main': {},
         'processing_started': False, 'processed_doc_path': None, 'processed_count': 0,
         'api_key_checked': False,
-        'api_key_valid': False
+        'api_key_valid': False,
+        'no_keywords_warning': False  # Flag to show warning when no keywords are found
     }
     for key, value in default_state.items():
         if key not in st.session_state:
@@ -1102,6 +1103,12 @@ def main():
         st.header("Step 1: Upload Document")
         st.write("Upload a Word document containing keywords that you want to process. The document should include keywords in double curly braces like `{{keyword}}`. Refer to the Keyword Reference Guides in the sidebar for Keyword Help.")
         
+        # Display warning if no keywords were found
+        if st.session_state.get('no_keywords_warning', False):
+            st.warning("No keywords were found in the previously uploaded document. Please upload a document with keywords enclosed in double curly braces like {{keyword}}.")
+            # Clear the warning flag so it doesn't show again on next upload
+            st.session_state.no_keywords_warning = False
+        
         doc_file = st.file_uploader("Upload Word Document (.docx)", type=["docx"], key="main_doc_uploader")
 
         if doc_file and not st.session_state.doc_uploaded:
@@ -1129,6 +1136,14 @@ def main():
                 try:
                     summary = preprocess_word_doc(st.session_state.doc_path)
                     st.session_state.analysis_summary = summary
+                    
+                    # Check if no keywords were found
+                    if summary['total_keywords'] == 0:
+                        st.session_state.no_keywords_warning = True
+                        # Reset to initial upload state but don't rerun immediately
+                        st.session_state.doc_uploaded = False
+                        st.session_state.current_step = 1
+                        st.rerun()
                     
                     # Initialize session state for excel files
                     if "excel_files_uploaded" not in st.session_state:
