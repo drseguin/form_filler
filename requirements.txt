@@ -1,6 +1,9 @@
 streamlit
-openpyxl
+openpyxl>=3.1.0
 pandas
 python-docx
-openai
+openai>=1.0.0
 spacy
+pathlib
+requests
+numpy
