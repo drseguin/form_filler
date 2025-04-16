@@ -1,10 +1,10 @@
 # FORM FILLER
 
 <p align="center">
-  <img src="assets/images/form_filler_logo.png" alt="FORM Filler Logo" width="200"/>
+  <img src="images/form_filler_logo.png" alt="FORM Filler Logo" width="200"/>
 </p>
 <p align="center">
-  <img src="assets/images/main_screen.png" alt="Main Screen" width="800"/>
+  <img src="images/main_screen.png" alt="Main Screen" width="800"/>
 </p>
 
 ## Overview

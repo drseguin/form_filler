@@ -903,7 +903,7 @@ def main():
     # Sidebar with keyword reference guide and reset button
     with st.sidebar:
         # Load and display the Form Filler logo
-        st.image("assets/images/form_filler_logo.png", width=250)
+        st.image("images/form_filler_logo.png", width=250)
         
         st.subheader("Navigation")
         
@@ -1212,7 +1212,7 @@ def main():
                                               for excel_file in excel_files_not_found)
                         
                         if all_files_uploaded:
-                            st.success("All required Excel files have been uploaded!")
+                            st.success(f"✅ All required Excel files uploaded: {len(excel_files_not_found)} file(s)")
                             st.session_state.excel_uploaded = True
                             # Only rerun if this is the first time we're setting the flag
                             if not st.session_state.get('rerun_triggered_after_upload', False):
@@ -1223,7 +1223,7 @@ def main():
                             
                     else:
                         # All specified Excel files were found
-                        st.success("All Excel files specified in the document have been found in the excel folder.")
+                        st.success(f"✅ All Excel files found: {len(excel_files)} file(s) located in the excel folder")
                         st.session_state.excel_uploaded = True
                         
                         # Initialize managers for the found files
@@ -1313,7 +1313,7 @@ def main():
                                           for template_file in template_files_not_found)
                     
                     if all_templates_uploaded:
-                        st.success("All required template files have been uploaded!")
+                        st.success(f"✅ All required template files uploaded: {len(template_files_not_found)} file(s)")
                         st.session_state.templates_uploaded = True
                         # Only rerun if this is the first time we're setting the flag
                         if not st.session_state.get('rerun_triggered_after_template_upload', False):
@@ -1323,7 +1323,7 @@ def main():
                         st.session_state.templates_uploaded = False
                 else:
                     # All template files were found
-                    st.success("All template files specified in the document have been found in the templates folder.")
+                    st.success(f"✅ All template files found: {len(template_files)} file(s) located in the templates folder")
                     st.session_state.templates_uploaded = True
                     
                     # Only rerun if this is the first time we're setting the flag for found templates
@@ -1375,7 +1375,7 @@ def main():
                                            for json_file in json_files_not_found)
                     
                     if all_json_uploaded:
-                        st.success("All required JSON files have been uploaded!")
+                        st.success(f"✅ All required JSON files uploaded: {len(json_files_not_found)} file(s)")
                         st.session_state.json_uploaded = True
                         # Only rerun if this is the first time we're setting the flag
                         if not st.session_state.get('rerun_triggered_after_json_upload', False):
@@ -1385,7 +1385,7 @@ def main():
                         st.session_state.json_uploaded = False
                 else:
                     # All JSON files were found
-                    st.success("All JSON files specified in the document have been found in the json folder.")
+                    st.success(f"✅ All JSON files found: {len(json_files)} file(s) located in the json folder")
                     st.session_state.json_uploaded = True
                     
                     # Only rerun if this is the first time we're setting the flag for found JSON
@@ -1480,7 +1480,8 @@ def main():
                                           for prompt_file in ai_prompt_files_not_found)
                 
                 if all_ai_source_uploaded and all_ai_prompt_uploaded:
-                    st.success("All required AI files have been uploaded!")
+                    total_ai_files_uploaded = len(ai_source_files_not_found) + len(ai_prompt_files_not_found)
+                    #st.success(f"✅ All required AI files uploaded: {total_ai_files_uploaded} file(s)")
                     st.session_state.ai_uploaded = True
                     # Only rerun if this is the first time we're setting the flag
                     if not st.session_state.get('rerun_triggered_after_ai_upload', False):
@@ -1498,7 +1499,8 @@ def main():
                 
                 # If no missing files were found but we need AI
                 if not ai_source_files_not_found and not ai_prompt_files_not_found and ai_source_files:
-                    st.success("All AI files specified in the document have been found in the ai folder.")
+                    total_ai_files = len(ai_source_files) + len(ai_prompt_files)
+                    st.success(f"✅ All AI files found: {total_ai_files} file(s) located in the ai folder")
                     st.session_state.ai_uploaded = True
                     
                     # Only rerun if this is the first time we're setting the flag for found AI
