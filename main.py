@@ -1062,10 +1062,10 @@ def main():
                     return deleted_count
                 return 0
             
-            # Delete Excel Files button
-            col1, col2 = st.columns([3, 1])
+            # Excel Files button
+            col1, col2 = st.columns([3, 2])
             with col1:
-                excel_delete = st.button("Delete Excel Files", key="del_excel_btn")
+                excel_delete = st.button("Excel Files", key="del_excel_btn")
             with col2:
                 excel_confirm = st.checkbox("Confirm", key="confirm_excel")
             
@@ -1086,10 +1086,10 @@ def main():
             elif excel_delete and not excel_confirm:
                 st.error("Please confirm by checking the box")
             
-            # Delete Template Files button
-            col1, col2 = st.columns([3, 1])
+            # Template Files button
+            col1, col2 = st.columns([3, 2])
             with col1:
-                templates_delete = st.button("Delete Template Files", key="del_templates_btn")
+                templates_delete = st.button("Template Files", key="del_templates_btn")
             with col2:
                 templates_confirm = st.checkbox("Confirm", key="confirm_templates")
             
@@ -1102,10 +1102,10 @@ def main():
             elif templates_delete and not templates_confirm:
                 st.error("Please confirm by checking the box")
             
-            # Delete JSON Files button
-            col1, col2 = st.columns([3, 1])
+            # JSON Files button
+            col1, col2 = st.columns([3, 2])
             with col1:
-                json_delete = st.button("Delete JSON Files", key="del_json_btn")
+                json_delete = st.button("JSON Files", key="del_json_btn")
             with col2:
                 json_confirm = st.checkbox("Confirm", key="confirm_json")
             
@@ -1118,10 +1118,10 @@ def main():
             elif json_delete and not json_confirm:
                 st.error("Please confirm by checking the box")
             
-            # Delete AI Files button
-            col1, col2 = st.columns([3, 1])
+            # AI Files button
+            col1, col2 = st.columns([3, 2])
             with col1:
-                ai_delete = st.button("Delete AI Files", key="del_ai_btn")
+                ai_delete = st.button("AI Files", key="del_ai_btn")
             with col2:
                 ai_confirm = st.checkbox("Confirm", key="confirm_ai")
             
@@ -1137,9 +1137,9 @@ def main():
             
             # Delete All Cached Files button (at the end as requested)
             st.markdown("---")
-            col1, col2 = st.columns([3, 1])
+            col1, col2 = st.columns([3, 2])
             with col1:
-                all_delete = st.button("Delete All Cached Files", key="del_all_btn")
+                all_delete = st.button("All Files", key="del_all_btn")
             with col2:
                 all_confirm = st.checkbox("Confirm", key="confirm_all")
                 
