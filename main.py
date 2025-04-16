@@ -1041,6 +1041,137 @@ def main():
             st.session_state.rerun_triggered_for_found_ai = False
                 
             st.rerun()
+            
+        # Delete Cache section
+        with st.expander("Delete Cache", expanded=False):
+            st.warning("⚠️ Warning: This will permanently delete files from the respective folders. This action cannot be undone.")
+            
+            # Helper function to delete files from a directory
+            def delete_files_from_directory(directory):
+                if os.path.exists(directory):
+                    deleted_count = 0
+                    for filename in os.listdir(directory):
+                        file_path = os.path.join(directory, filename)
+                        try:
+                            if os.path.isfile(file_path):
+                                os.unlink(file_path)
+                                deleted_count += 1
+                                logger.info(f"Deleted file: {file_path}")
+                        except Exception as e:
+                            logger.error(f"Error deleting {file_path}: {str(e)}")
+                    return deleted_count
+                return 0
+            
+            # Delete Excel Files button
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                excel_delete = st.button("Delete Excel Files", key="del_excel_btn")
+            with col2:
+                excel_confirm = st.checkbox("Confirm", key="confirm_excel")
+            
+            if excel_delete and excel_confirm:
+                deleted_count = delete_files_from_directory("excel")
+                st.success(f"✅ Deleted {deleted_count} Excel files")
+                st.session_state.excel_files_uploaded = {}
+                st.session_state.excel_uploaded = False
+                if 'excel_managers' in st.session_state:
+                    # Close all excel managers
+                    for filename, manager in st.session_state.excel_managers.items():
+                        try:
+                            manager.close()
+                        except:
+                            pass
+                    st.session_state.excel_managers = {}
+                st.rerun()
+            elif excel_delete and not excel_confirm:
+                st.error("Please confirm by checking the box")
+            
+            # Delete Template Files button
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                templates_delete = st.button("Delete Template Files", key="del_templates_btn")
+            with col2:
+                templates_confirm = st.checkbox("Confirm", key="confirm_templates")
+            
+            if templates_delete and templates_confirm:
+                deleted_count = delete_files_from_directory("templates")
+                st.success(f"✅ Deleted {deleted_count} template files")
+                st.session_state.template_files_uploaded = {}
+                st.session_state.templates_uploaded = False
+                st.rerun()
+            elif templates_delete and not templates_confirm:
+                st.error("Please confirm by checking the box")
+            
+            # Delete JSON Files button
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                json_delete = st.button("Delete JSON Files", key="del_json_btn")
+            with col2:
+                json_confirm = st.checkbox("Confirm", key="confirm_json")
+            
+            if json_delete and json_confirm:
+                deleted_count = delete_files_from_directory("json")
+                st.success(f"✅ Deleted {deleted_count} JSON files")
+                st.session_state.json_files_uploaded = {}
+                st.session_state.json_uploaded = False
+                st.rerun()
+            elif json_delete and not json_confirm:
+                st.error("Please confirm by checking the box")
+            
+            # Delete AI Files button
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                ai_delete = st.button("Delete AI Files", key="del_ai_btn")
+            with col2:
+                ai_confirm = st.checkbox("Confirm", key="confirm_ai")
+            
+            if ai_delete and ai_confirm:
+                deleted_count = delete_files_from_directory("ai")
+                st.success(f"✅ Deleted {deleted_count} AI files")
+                st.session_state.ai_source_files_uploaded = {}
+                st.session_state.ai_prompt_files_uploaded = {}
+                st.session_state.ai_uploaded = False
+                st.rerun()
+            elif ai_delete and not ai_confirm:
+                st.error("Please confirm by checking the box")
+            
+            # Delete All Cached Files button (at the end as requested)
+            st.markdown("---")
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                all_delete = st.button("Delete All Cached Files", key="del_all_btn")
+            with col2:
+                all_confirm = st.checkbox("Confirm", key="confirm_all")
+                
+            if all_delete and all_confirm:
+                total_deleted = 0
+                total_deleted += delete_files_from_directory("excel")
+                total_deleted += delete_files_from_directory("templates")
+                total_deleted += delete_files_from_directory("json")
+                total_deleted += delete_files_from_directory("ai")
+                st.success(f"✅ Deleted {total_deleted} files from all cache folders")
+                # Reset relevant session state for uploads
+                st.session_state.excel_files_uploaded = {}
+                st.session_state.template_files_uploaded = {}
+                st.session_state.json_files_uploaded = {}
+                st.session_state.ai_source_files_uploaded = {}
+                st.session_state.ai_prompt_files_uploaded = {}
+                # Reset upload flags
+                st.session_state.excel_uploaded = False
+                st.session_state.templates_uploaded = False
+                st.session_state.json_uploaded = False
+                st.session_state.ai_uploaded = False
+                # Close any open Excel managers
+                if 'excel_managers' in st.session_state:
+                    for filename, manager in st.session_state.excel_managers.items():
+                        try:
+                            manager.close()
+                        except:
+                            pass
+                    st.session_state.excel_managers = {}
+                st.rerun()
+            elif all_delete and not all_confirm:
+                st.error("Please confirm by checking the box")
     
     # Main content area - first check the API key
     # Check for OpenAI API key before showing any step content
