@@ -1,14 +1,20 @@
 from typing import Optional
 from pathlib import Path
-from logs.logger_config import setup_logger
+from AppLogger import logger
 from llm_client import LLMClient
+import requests
+import json
+import numpy as np
 
 
 class TritonClient(LLMClient):
     """Triton implementation of LLM client - to be implemented in the future."""
     
-    def __init__(self):
+    def __init__(self, url="http://127.0.0.1:8000"):
+        """Initialize the Triton client with the server URL."""
         super().__init__()
+        self.url = url
+        self.logger = logger
         self.logger.info("Initializing Triton client (placeholder)")
         self.api_key = self.get_api_key()
         

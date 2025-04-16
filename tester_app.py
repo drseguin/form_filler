@@ -6,11 +6,11 @@ import json
 import logging
 from excel_manager import excelManager
 from keyword_parser import keywordParser
-from logs.logger_config import setup_logger
+from AppLogger import logger
 from pathlib import Path
 
 # Setup logger
-logger = setup_logger('tester_app')
+# logger = setup_logger('tester_app')
 
 def check_openai_api_key() -> bool:
     """

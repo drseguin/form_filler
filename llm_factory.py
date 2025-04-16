@@ -2,7 +2,7 @@ import json
 import os
 from pathlib import Path
 from typing import Dict, Any, Optional
-from logs.logger_config import setup_logger
+from AppLogger import logger
 from llm_client import LLMClient, OpenAIClient
 from triton_client import TritonClient
 
@@ -11,7 +11,7 @@ class LLMFactory:
     """Factory class for creating LLM clients based on configuration."""
     
     def __init__(self):
-        self.logger = setup_logger('llm_factory')
+        self.logger = logger
         self.config = self._load_config()
         
     def _load_config(self) -> Dict[str, Any]:
@@ -59,12 +59,18 @@ class LLMFactory:
             return OpenAIClient()
 
 
-def get_llm_client() -> LLMClient:
+def get_llm_client(engine=None, api_key=None, use_triton=False):
     """
-    Convenience function to get an LLM client instance.
+    Get an appropriate LLM client based on the provided config and environment.
+    
+    Args:
+        engine: Optional model name/engine to use
+        api_key: Optional API key for OpenAI
+        use_triton: Whether to use the Triton client (for local models)
     
     Returns:
-        An instance of a class implementing LLMClient
+        An initialized LLM client
     """
+    logger.info(f"Getting LLM client with engine: {engine}, use_triton: {use_triton}")
     factory = LLMFactory()
     return factory.create_client() 

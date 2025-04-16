@@ -19,7 +19,7 @@ RUN python -m spacy download en_core_web_trf
 COPY . .
 
 # Create necessary directories
-RUN mkdir -p logs excel templates json ai tmp
+RUN mkdir -p logs excel templates json ai tmp debug
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1

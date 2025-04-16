@@ -6,7 +6,7 @@ from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter, column_index_from_string
 from openpyxl.utils.cell import coordinate_from_string, coordinate_to_tuple
 import re
-from logs.logger_config import setup_logger
+from AppLogger import logger
 
 # Configure logging - replaced with centralized logger
 # logging.basicConfig(
@@ -24,7 +24,7 @@ class excelManager:
         Initialize the ExcelManager with an optional file path.
         If no file path is provided, operations will require a file path.
         """
-        self.logger = setup_logger('excel_manager')
+        self.logger = logger
         self.file_path = file_path
         self.workbook = None
         self.formula_workbook = None

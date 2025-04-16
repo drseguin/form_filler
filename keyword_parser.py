@@ -13,7 +13,7 @@ from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from logs.logger_config import setup_logger
+from AppLogger import logger
 from llm_factory import get_llm_client
 
 class keywordParser:
@@ -32,7 +32,7 @@ class keywordParser:
             excel_managers: A dictionary mapping Excel filenames to excelManager instances.
                             This is used for the new format with Excel file specification.
         """
-        self.logger = setup_logger('keyword_parser')
+        self.logger = logger
         self.excel_manager = excel_manager
         self.excel_managers = excel_managers or {}  # Dictionary of Excel managers by filename
         self.pattern = r'{{(.*?)}}'

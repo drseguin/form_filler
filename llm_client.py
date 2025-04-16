@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import os
 from pathlib import Path
 from typing import Dict, Optional, Union
-from logs.logger_config import setup_logger
+from AppLogger import logger
 import streamlit as st
 
 
@@ -10,7 +10,7 @@ class LLMClient(ABC):
     """Abstract base class for LLM clients."""
 
     def __init__(self):
-        self.logger = setup_logger('llm_client')
+        self.logger = logger
 
     @abstractmethod
     def summarize(self, 

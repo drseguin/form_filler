@@ -9,11 +9,11 @@ import logging
 from excel_manager import excelManager # Assuming excel_manager.py is in the same directory
 from keyword_parser import keywordParser # Assuming keyword_parser.py is in the same directory
 from collections import Counter
-from logs.logger_config import setup_logger
+from AppLogger import logger
 from pathlib import Path
 
 # Setup logger
-logger = setup_logger('main')
+# logger = setup_logger('main')
 
 def check_openai_api_key() -> bool:
     """
